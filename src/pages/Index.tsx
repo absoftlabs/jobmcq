@@ -4,9 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Clock3, FileText, Coins, ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
+import type { Tables } from "@/integrations/supabase/types";
 
 interface PublicExam {
   id: string;
@@ -22,18 +22,18 @@ interface PublicLeaderboardRow {
   rank: number;
   user_id: string;
   full_name: string;
-  score: number;
-  time_taken_seconds: number;
-  coin_balance: number;
-  exams_given: number;
+  points: number;
+  passed_exams: number;
 }
+
+type ProfileLite = Pick<Tables<"profiles">, "user_id" | "full_name" | "coin_balance">;
+type PassedAttemptLite = Pick<Tables<"attempts">, "user_id">;
 
 export default function Index() {
   const { user, hasRole } = useAuth();
   const [loadingExams, setLoadingExams] = useState(true);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
   const [exams, setExams] = useState<PublicExam[]>([]);
-  const [selectedExamId, setSelectedExamId] = useState("");
   const [leaderboard, setLeaderboard] = useState<PublicLeaderboardRow[]>([]);
 
   const dashboardPath = useMemo(() => {
@@ -52,7 +52,6 @@ export default function Index() {
 
         const rows = (data || []) as PublicExam[];
         setExams(rows);
-        if (rows.length > 0) setSelectedExamId(rows[0].id);
       } finally {
         setLoadingExams(false);
       }
@@ -63,33 +62,43 @@ export default function Index() {
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
-      if (!selectedExamId) {
-        setLeaderboard([]);
-        setLoadingLeaderboard(false);
-        return;
-      }
-
       setLoadingLeaderboard(true);
       try {
-        const rpcClient = supabase as unknown as {
-          rpc: (
-            fn: string,
-            params: { p_exam_id: string; p_limit: number },
-          ) => Promise<{ data: PublicLeaderboardRow[] | null }>;
-        };
+        const [{ data: profiles }, { data: passedAttempts }] = await Promise.all([
+          supabase.from("profiles").select("user_id, full_name, coin_balance"),
+          supabase.from("attempts").select("user_id").eq("is_passed", true).not("submitted_at", "is", null),
+        ]);
 
-        const { data } = await rpcClient.rpc("get_public_leaderboard", {
-          p_exam_id: selectedExamId,
-          p_limit: 10,
+        const typedProfiles = (profiles || []) as ProfileLite[];
+        const typedPassed = (passedAttempts || []) as PassedAttemptLite[];
+
+        const passedCountMap = new Map<string, number>();
+        typedPassed.forEach((a) => {
+          passedCountMap.set(a.user_id, (passedCountMap.get(a.user_id) || 0) + 1);
         });
-        setLeaderboard((data || []) as PublicLeaderboardRow[]);
+
+        const ranked = typedProfiles
+          .map((p) => ({
+            user_id: p.user_id,
+            full_name: p.full_name || "-",
+            points: p.coin_balance ?? 0,
+            passed_exams: passedCountMap.get(p.user_id) || 0,
+          }))
+          .sort((a, b) => b.points - a.points || b.passed_exams - a.passed_exams || a.full_name.localeCompare(b.full_name))
+          .slice(0, 10)
+          .map((row, index) => ({
+            rank: index + 1,
+            ...row,
+          }));
+
+        setLeaderboard(ranked);
       } finally {
         setLoadingLeaderboard(false);
       }
     };
 
     void fetchLeaderboard();
-  }, [selectedExamId]);
+  }, []);
 
   const liveExams = exams.filter((e) => e.status === "live");
 
@@ -106,8 +115,8 @@ export default function Index() {
                 <Sparkles className="h-4 w-4" />
               </div>
               <div className="leading-tight">
-                <p className="text-base font-bold">Job MCQ Arena</p>
-                <p className="text-xs text-muted-foreground">Smart Exam Preparation</p>
+                <p className="text-base font-bold">চাকরির প্রস্তুতি</p>
+                <p className="text-xs text-muted-foreground">সম্পূর্ণ বাংলা MCQ প্রস্তুতি প্ল্যাটফর্ম</p>
               </div>
             </div>
 
@@ -210,7 +219,7 @@ export default function Index() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm leading-relaxed text-muted-foreground">
-                যে কেউ exam-wise ranking দেখতে পারবে এবং প্রতিযোগিতার অবস্থান বুঝতে পারবে।
+                যে কেউ global ranking দেখতে পারবে এবং প্রতিযোগিতার অবস্থান বুঝতে পারবে।
               </CardContent>
             </Card>
           </div>
@@ -266,21 +275,7 @@ export default function Index() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="space-y-2 text-left">
             <h2 className="text-3xl font-black tracking-tight">পাবলিক লিডারবোর্ড</h2>
-              <p className="text-sm text-muted-foreground">সবার জন্য উন্মুক্ত exam-wise ranking</p>
-            </div>
-            <div className="w-full max-w-xs">
-              <Select value={selectedExamId} onValueChange={setSelectedExamId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="পরীক্ষা নির্বাচন করুন" />
-                </SelectTrigger>
-                <SelectContent>
-                  {exams.map((exam) => (
-                    <SelectItem key={exam.id} value={exam.id}>
-                      {exam.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <p className="text-sm text-muted-foreground">সবার জন্য উন্মুক্ত global ranking (কয়েন/পয়েন্ট ভিত্তিক)</p>
             </div>
           </div>
 
@@ -291,7 +286,7 @@ export default function Index() {
                   <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                 </div>
               ) : leaderboard.length === 0 ? (
-                <div className="py-12 text-center text-muted-foreground">এই পরীক্ষার leaderboard এখনো খালি।</div>
+                <div className="py-12 text-center text-muted-foreground">লিডারবোর্ড এখনো খালি।</div>
               ) : (
                 <div className="divide-y">
                   {leaderboard.map((row) => (
@@ -303,12 +298,8 @@ export default function Index() {
                         <span className="font-semibold">{row.full_name}</span>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-black text-accent">{Number(row.score).toFixed(1)}%</p>
                         <p className="text-xs text-muted-foreground">
-                          {Math.floor(row.time_taken_seconds / 60)}m {row.time_taken_seconds % 60}s
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {row.coin_balance} কয়েন • {row.exams_given} পরীক্ষা
+                          {row.points} কয়েন • {row.passed_exams} পাস
                         </p>
                       </div>
                     </div>
