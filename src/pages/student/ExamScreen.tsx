@@ -10,13 +10,23 @@ import { useToast } from "@/hooks/use-toast";
 import { Flag, ChevronLeft, ChevronRight, Send } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { Enums, Tables, TablesInsert } from "@/integrations/supabase/types";
 
 interface Question {
   id: string;
   question_text: string;
-  question_type: string;
+  question_type: Enums<"question_type">;
   options: { id: string; option_text: string; sort_order: number }[];
 }
+
+type AttemptRow = Tables<"attempts">;
+type ExamRow = Tables<"exams">;
+type ExamQuestionRow = Pick<Tables<"exam_questions">, "question_id">;
+type QuestionRow = Pick<Tables<"questions">, "id" | "question_text" | "question_type">;
+type QuestionOptionRow = Pick<Tables<"question_options">, "id" | "question_id" | "option_text" | "sort_order" | "is_correct">;
+type AttemptAnswerRow = Tables<"attempt_answers">;
+type AttemptExamId = Pick<Tables<"attempts">, "exam_id">;
+type ExamPassMark = Pick<Tables<"exams">, "pass_mark">;
 
 export default function ExamScreen() {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -50,19 +60,20 @@ export default function ExamScreen() {
         .eq("id", attemptId)
         .single();
 
-      if (!attempt || (attempt as any).submitted_at) {
+      if (!attempt || attempt.submitted_at) {
         navigate(`/student/result/${attemptId}`);
         return;
       }
 
-      const examId = (attempt as any).exam_id;
-      setStartedAt(new Date((attempt as any).started_at));
+      const examId = attempt.exam_id;
+      setStartedAt(new Date(attempt.started_at));
 
       const { data: exam } = await supabase.from("exams").select("*").eq("id", examId).single();
-      const shouldShuffle = Boolean((exam as any)?.shuffle_options);
-      if (exam) {
-        setExamTitle((exam as any).title);
-        setDurationMinutes((exam as any).duration_minutes);
+      const typedExam = exam as ExamRow | null;
+      const shouldShuffle = Boolean(typedExam?.shuffle_options);
+      if (typedExam) {
+        setExamTitle(typedExam.title);
+        setDurationMinutes(typedExam.duration_minutes);
         setShuffleOptions(shouldShuffle);
       }
 
@@ -72,13 +83,13 @@ export default function ExamScreen() {
         .eq("exam_id", examId)
         .order("sort_order");
 
-      const qIds = (eqs || []).map((eq: any) => eq.question_id);
+      const qIds = ((eqs || []) as ExamQuestionRow[]).map((eq) => eq.question_id);
       const { data: qs } = await supabase.from("questions").select("id, question_text, question_type").in("id", qIds);
       const { data: opts } = await supabase.from("question_options").select("id, question_id, option_text, sort_order").in("question_id", qIds).order("sort_order");
 
-      const qMap = new Map((qs || []).map((q: any) => [q.id, q]));
-      const optMap = new Map<string, any[]>();
-      (opts || []).forEach((o: any) => {
+      const qMap = new Map(((qs || []) as QuestionRow[]).map((q) => [q.id, q]));
+      const optMap = new Map<string, QuestionOptionRow[]>();
+      ((opts || []) as QuestionOptionRow[]).forEach((o) => {
         const arr = optMap.get(o.question_id) || [];
         arr.push(o);
         optMap.set(o.question_id, arr);
@@ -97,7 +108,7 @@ export default function ExamScreen() {
       const { data: saved } = await supabase.from("attempt_answers").select("*").eq("attempt_id", attemptId);
       const ans: Record<string, string[]> = {};
       const fill: Record<string, string> = {};
-      (saved || []).forEach((a: any) => {
+      ((saved || []) as AttemptAnswerRow[]).forEach((a) => {
         if (a.selected_option_ids?.length) ans[a.question_id] = a.selected_option_ids;
         if (a.fill_answer) fill[a.question_id] = a.fill_answer;
       });
@@ -135,7 +146,7 @@ export default function ExamScreen() {
     }, 500);
   }, [attemptId]);
 
-  const selectOption = (qId: string, optId: string, type: string) => {
+  const selectOption = (qId: string, optId: string, type: Enums<"question_type">) => {
     const newAns = { ...answers };
     if (type === "mcq") {
       newAns[qId] = [optId];
@@ -166,14 +177,14 @@ export default function ExamScreen() {
       .eq("is_correct", true);
 
     const correctMap = new Map<string, Set<string>>();
-    (correctOpts || []).forEach((o: any) => {
+    ((correctOpts || []) as QuestionOptionRow[]).forEach((o) => {
       const s = correctMap.get(o.question_id) || new Set();
       s.add(o.id);
       correctMap.set(o.question_id, s);
     });
 
     let correct = 0, wrong = 0, skipped = 0;
-    const answerUpdates: any[] = [];
+    const answerUpdates: TablesInsert<"attempt_answers">[] = [];
 
     questions.forEach(q => {
       const selected = answers[q.id] || [];
@@ -206,8 +217,10 @@ export default function ExamScreen() {
 
     // Get exam pass_mark
     const { data: attempt } = await supabase.from("attempts").select("exam_id").eq("id", attemptId).single();
-    const { data: exam } = await supabase.from("exams").select("pass_mark, reward_coins").eq("id", (attempt as any).exam_id).single();
-    const isPassed = score >= ((exam as any)?.pass_mark || 40);
+    const typedAttempt = attempt as AttemptExamId | null;
+    const { data: exam } = await supabase.from("exams").select("pass_mark").eq("id", typedAttempt?.exam_id || "").single();
+    const typedPass = exam as ExamPassMark | null;
+    const isPassed = score >= (typedPass?.pass_mark || 40);
 
     await supabase.from("attempts").update({
       submitted_at: new Date().toISOString(),

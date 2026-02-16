@@ -24,38 +24,89 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<{ full_name: string; coin_balance: number } | null>(null);
 
   const fetchUserData = async (userId: string) => {
-    const [rolesRes, profileRes] = await Promise.all([
-      supabase.from("user_roles").select("role").eq("user_id", userId),
-      supabase.from("profiles").select("full_name, coin_balance").eq("user_id", userId).single(),
-    ]);
-    if (rolesRes.data) setRoles(rolesRes.data.map((r: any) => r.role as AppRole));
-    if (profileRes.data) setProfile(profileRes.data as any);
+    try {
+      const [rolesRes, profileRes] = await Promise.all([
+        supabase.from("user_roles").select("role").eq("user_id", userId),
+        supabase.from("profiles").select("full_name, coin_balance").eq("user_id", userId).single(),
+      ]);
+
+      if (rolesRes.data) setRoles(rolesRes.data.map((r: { role: string }) => r.role as AppRole));
+      else setRoles([]);
+
+      if (profileRes.data) {
+        setProfile({
+          full_name: profileRes.data.full_name ?? "",
+          coin_balance: Number(profileRes.data.coin_balance ?? 0),
+        });
+      } else {
+        setProfile(null);
+      }
+    } catch {
+      setRoles([]);
+      setProfile(null);
+    }
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) await fetchUserData(session.user.id);
-      setLoading(false);
-    });
+    let isMounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchUserData(session.user.id);
-      } else {
+    const initSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          void fetchUserData(session.user.id);
+        } else {
+          setRoles([]);
+          setProfile(null);
+        }
+      } catch {
+        if (!isMounted) return;
+        setSession(null);
+        setUser(null);
         setRoles([]);
         setProfile(null);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-      setLoading(false);
+    };
+
+    void initSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      try {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          void fetchUserData(session.user.id);
+        } else {
+          setRoles([]);
+          setProfile(null);
+        }
+      } catch {
+        setRoles([]);
+        setProfile(null);
+      } finally {
+        setLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const hasRole = (role: AppRole) => roles.includes(role);
+  const hasRole = (role: AppRole) => {
+    if (role === "student") {
+      return roles.length === 0 || roles.includes("student");
+    }
+    return roles.includes(role);
+  };
   const signOut = async () => { await supabase.auth.signOut(); };
 
   return (

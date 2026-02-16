@@ -5,6 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search } from "lucide-react";
+import type { Tables } from "@/integrations/supabase/types";
+
+type ProfileRow = Tables<"profiles">;
+type UserRoleRow = Tables<"user_roles">;
 
 interface UserWithRole {
   id: string;
@@ -26,13 +30,13 @@ export default function AdminUsers() {
       const { data: roles } = await supabase.from("user_roles").select("*");
 
       const roleMap = new Map<string, string[]>();
-      (roles || []).forEach((r: any) => {
+      (roles || []).forEach((r: UserRoleRow) => {
         const existing = roleMap.get(r.user_id) || [];
         existing.push(r.role);
         roleMap.set(r.user_id, existing);
       });
 
-      const combined = (profiles || []).map((p: any) => ({
+      const combined = (profiles || []).map((p: ProfileRow) => ({
         ...p,
         roles: roleMap.get(p.user_id) || ["student"],
       }));

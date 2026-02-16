@@ -20,27 +20,30 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const [usersRes, examsRes, liveRes, attemptsRes, passedRes, reportsRes] = await Promise.all([
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
-        supabase.from("exams").select("id", { count: "exact", head: true }),
-        supabase.from("exams").select("id", { count: "exact", head: true }).eq("status", "live"),
-        supabase.from("attempts").select("id", { count: "exact", head: true }).not("submitted_at", "is", null),
-        supabase.from("attempts").select("id", { count: "exact", head: true }).eq("is_passed", true),
-        supabase.from("question_reports").select("id", { count: "exact", head: true }).eq("status", "pending"),
-      ]);
+      try {
+        const [usersRes, examsRes, liveRes, attemptsRes, passedRes, reportsRes] = await Promise.all([
+          supabase.from("profiles").select("id", { count: "exact", head: true }),
+          supabase.from("exams").select("id", { count: "exact", head: true }),
+          supabase.from("exams").select("id", { count: "exact", head: true }).eq("status", "live"),
+          supabase.from("attempts").select("id", { count: "exact", head: true }).not("submitted_at", "is", null),
+          supabase.from("attempts").select("id", { count: "exact", head: true }).eq("is_passed", true),
+          supabase.from("question_reports").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        ]);
 
-      const totalAttempts = attemptsRes.count ?? 0;
-      const passed = passedRes.count ?? 0;
+        const totalAttempts = attemptsRes.count ?? 0;
+        const passed = passedRes.count ?? 0;
 
-      setStats({
-        totalUsers: usersRes.count ?? 0,
-        totalExams: examsRes.count ?? 0,
-        liveExams: liveRes.count ?? 0,
-        totalAttempts,
-        passRate: totalAttempts > 0 ? Math.round((passed / totalAttempts) * 100) : 0,
-        pendingReports: reportsRes.count ?? 0,
-      });
-      setLoading(false);
+        setStats({
+          totalUsers: usersRes.count ?? 0,
+          totalExams: examsRes.count ?? 0,
+          liveExams: liveRes.count ?? 0,
+          totalAttempts,
+          passRate: totalAttempts > 0 ? Math.round((passed / totalAttempts) * 100) : 0,
+          pendingReports: reportsRes.count ?? 0,
+        });
+      } finally {
+        setLoading(false);
+      }
     };
     fetchStats();
   }, []);

@@ -7,15 +7,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
+import type { Tables } from "@/integrations/supabase/types";
+
+type AttemptRow = Tables<"attempts">;
+type ExamTitleRow = Pick<Tables<"exams">, "id" | "title">;
+type AttemptWithTitle = AttemptRow & { exam_title: string };
 
 export default function MyExams() {
   const { user } = useAuth();
-  const [attempts, setAttempts] = useState<any[]>([]);
+  const [attempts, setAttempts] = useState<AttemptWithTitle[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetch = async () => {
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       const { data } = await supabase
         .from("attempts")
         .select("*")
@@ -24,14 +32,15 @@ export default function MyExams() {
         .order("submitted_at", { ascending: false });
 
       if (data && data.length > 0) {
-        const examIds = [...new Set(data.map((a: any) => a.exam_id))];
+        const examIds = [...new Set(data.map((a) => a.exam_id))];
         const { data: exams } = await supabase.from("exams").select("id, title").in("id", examIds);
-        const examMap = new Map((exams || []).map((e: any) => [e.id, e.title]));
-        setAttempts(data.map((a: any) => ({ ...a, exam_title: examMap.get(a.exam_id) || "—" })));
+        const typedExams = (exams || []) as ExamTitleRow[];
+        const examMap = new Map(typedExams.map((e) => [e.id, e.title]));
+        setAttempts(data.map((a) => ({ ...a, exam_title: examMap.get(a.exam_id) || "—" })));
       }
       setLoading(false);
     };
-    fetch();
+    void fetch();
   }, [user]);
 
   return (
@@ -60,14 +69,14 @@ export default function MyExams() {
                 {attempts.map(a => (
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.exam_title}</TableCell>
-                    <TableCell>{Number(a.score).toFixed(1)}%</TableCell>
+                    <TableCell>{Number(a.score ?? 0).toFixed(1)}%</TableCell>
                     <TableCell>
                       <Badge variant={a.is_passed ? "default" : "destructive"}>
                         {a.is_passed ? "পাস" : "ফেল"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(a.submitted_at).toLocaleDateString("bn-BD")}
+                      {a.submitted_at ? new Date(a.submitted_at).toLocaleDateString("bn-BD") : "—"}
                     </TableCell>
                     <TableCell>
                       <Link to={`/student/result/${a.id}`}>
@@ -84,3 +93,4 @@ export default function MyExams() {
     </div>
   );
 }
+

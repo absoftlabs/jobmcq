@@ -4,23 +4,35 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Coins } from "lucide-react";
+import type { Tables } from "@/integrations/supabase/types";
+
+type CoinTransaction = Tables<"coin_transactions">;
 
 export default function Wallet() {
   const { user, profile } = useAuth();
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<CoinTransaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
-    supabase
-      .from("coin_transactions")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setTransactions(data || []);
+    const fetchTransactions = async () => {
+      if (!user) {
         setLoading(false);
-      });
+        return;
+      }
+
+      try {
+        const { data } = await supabase
+          .from("coin_transactions")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        setTransactions(data || []);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchTransactions();
   }, [user]);
 
   return (

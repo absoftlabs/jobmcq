@@ -47,6 +47,9 @@
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+    --font-bn-body: "Anek Bangla", "Noto Sans Bengali", "Hind Siliguri", "Kalpurush", "SolaimanLipi", "Vrinda", sans-serif;
+    --font-bn-ui: "Anek Bangla", "Hind Siliguri", "Noto Sans Bengali", "Kalpurush", sans-serif;
+    --font-bn-display: "Anek Bangla", "Tiro Bangla", "Noto Sans Bengali", "Hind Siliguri", "Siyam Rupali", serif;
   }
 
   .dark {
@@ -91,6 +94,9 @@
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+    --font-bn-body: "Anek Bangla", "Noto Sans Bengali", "Hind Siliguri", "Kalpurush", "SolaimanLipi", "Vrinda", sans-serif;
+    --font-bn-ui: "Anek Bangla", "Hind Siliguri", "Noto Sans Bengali", "Kalpurush", sans-serif;
+    --font-bn-display: "Anek Bangla", "Tiro Bangla", "Noto Sans Bengali", "Hind Siliguri", "Siyam Rupali", serif;
   }
 }
 
@@ -101,6 +107,45 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Noto Sans Bengali', 'Inter', system-ui, sans-serif;
+    font-family: var(--font-bn-body);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-bn-display);
+    letter-spacing: -0.01em;
+  }
+
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-bn-ui);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-family: var(--font-bn-ui);
+  }
+}
+
+@layer utilities {
+  @keyframes fade-rise {
+    0% {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-rise {
+    animation: fade-rise 700ms ease-out both;
   }
 }

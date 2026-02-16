@@ -13,7 +13,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@fontsource/anek-bangla": "^5.2.7",
+    "@fontsource/hind-siliguri": "^5.2.7",
     "@fontsource/noto-sans-bengali": "^5.2.11",
+    "@fontsource/tiro-bangla": "^5.2.6",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",

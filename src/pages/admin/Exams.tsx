@@ -12,24 +12,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Eye } from "lucide-react";
+import type { Enums, Tables, TablesInsert } from "@/integrations/supabase/types";
 
-interface Exam {
-  id: string;
-  title: string;
-  description: string | null;
-  status: string;
-  total_questions: number;
-  duration_minutes: number;
-  pass_mark: number;
-  max_attempts: number;
-  reward_coins: number;
-  shuffle_options: boolean;
-  negative_marking: boolean;
-  negative_mark_value: number;
-  scheduled_at: string | null;
-  ends_at: string | null;
-  created_at: string;
-}
+type Exam = Tables<"exams">;
+type ExamStatus = Enums<"exam_status">;
+type QuestionSummary = Pick<Tables<"questions">, "id" | "question_text" | "category" | "difficulty">;
+type AssignedQuestion = Pick<Tables<"exam_questions">, "question_id">;
 
 export default function AdminExams() {
   const [exams, setExams] = useState<Exam[]>([]);
@@ -38,14 +26,14 @@ export default function AdminExams() {
   const [editing, setEditing] = useState<Exam | null>(null);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [assignExamId, setAssignExamId] = useState<string | null>(null);
-  const [allQuestions, setAllQuestions] = useState<any[]>([]);
+  const [allQuestions, setAllQuestions] = useState<QuestionSummary[]>([]);
   const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   // Form
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [status, setStatus] = useState("draft");
+  const [status, setStatus] = useState<ExamStatus>("draft");
   const [totalQuestions, setTotalQuestions] = useState(25);
   const [duration, setDuration] = useState(30);
   const [passMark, setPassMark] = useState(40);
@@ -57,7 +45,7 @@ export default function AdminExams() {
 
   const fetchExams = async () => {
     const { data } = await supabase.from("exams").select("*").order("created_at", { ascending: false });
-    if (data) setExams(data as any);
+    if (data) setExams(data);
     setLoading(false);
   };
 
@@ -79,8 +67,8 @@ export default function AdminExams() {
 
   const handleSave = async () => {
     if (!title.trim()) { toast({ title: "শিরোনাম দিন", variant: "destructive" }); return; }
-    const payload = {
-      title, description: description || null, status: status as any,
+    const payload: TablesInsert<"exams"> = {
+      title, description: description || null, status,
       total_questions: totalQuestions, duration_minutes: duration, pass_mark: passMark,
       max_attempts: maxAttempts, reward_coins: rewardCoins, shuffle_options: shuffle,
       negative_marking: negativeMarking, negative_mark_value: negativeValue,
@@ -110,7 +98,8 @@ export default function AdminExams() {
       supabase.from("exam_questions").select("question_id").eq("exam_id", examId),
     ]);
     setAllQuestions(qs || []);
-    setAssignedIds(new Set((assigned || []).map((a: any) => a.question_id)));
+    const typedAssigned = (assigned || []) as AssignedQuestion[];
+    setAssignedIds(new Set(typedAssigned.map((a) => a.question_id)));
     setAssignDialogOpen(true);
   };
 
@@ -127,8 +116,8 @@ export default function AdminExams() {
     setAssignedIds(newSet);
   };
 
-  const statusLabel: Record<string, string> = { draft: "ড্রাফট", scheduled: "নির্ধারিত", live: "লাইভ", ended: "শেষ" };
-  const statusColor: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  const statusLabel: Record<ExamStatus, string> = { draft: "ড্রাফট", scheduled: "নির্ধারিত", live: "লাইভ", ended: "শেষ" };
+  const statusColor: Record<ExamStatus, "default" | "secondary" | "destructive" | "outline"> = {
     draft: "secondary", scheduled: "outline", live: "default", ended: "destructive",
   };
 
@@ -288,3 +277,4 @@ export default function AdminExams() {
     </div>
   );
 }
+

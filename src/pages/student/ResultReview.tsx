@@ -5,10 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, MinusCircle, ArrowLeft } from "lucide-react";
+import type { Enums, Tables } from "@/integrations/supabase/types";
+
+type AttemptRow = Tables<"attempts">;
+type ExamTitle = Pick<Tables<"exams">, "title">;
+type ExamQuestionRow = Pick<Tables<"exam_questions">, "question_id">;
+type QuestionRow = Tables<"questions">;
+type QuestionOptionRow = Tables<"question_options">;
+type AttemptAnswerRow = Tables<"attempt_answers">;
 
 interface AnswerDetail {
   question_text: string;
-  question_type: string;
+  question_type: Enums<"question_type">;
   selected_option_ids: string[];
   fill_answer: string | null;
   is_correct: boolean | null;
@@ -18,7 +26,7 @@ interface AnswerDetail {
 
 export default function ResultReview() {
   const { attemptId } = useParams<{ attemptId: string }>();
-  const [attempt, setAttempt] = useState<any>(null);
+  const [attempt, setAttempt] = useState<AttemptRow | null>(null);
   const [details, setDetails] = useState<AnswerDetail[]>([]);
   const [filter, setFilter] = useState<"all" | "correct" | "wrong" | "skipped">("all");
   const [loading, setLoading] = useState(true);
@@ -38,16 +46,16 @@ export default function ResultReview() {
       }
       setAttempt(att);
 
-      const { data: exam } = await supabase.from("exams").select("title").eq("id", (att as any).exam_id).single();
-      setExamTitle((exam as any)?.title || "");
+      const { data: exam } = await supabase.from("exams").select("title").eq("id", att.exam_id).single();
+      setExamTitle(((exam as ExamTitle | null)?.title) || "");
 
       const { data: eqs } = await supabase
         .from("exam_questions")
         .select("question_id, sort_order")
-        .eq("exam_id", (att as any).exam_id)
+        .eq("exam_id", att.exam_id)
         .order("sort_order");
 
-      const qIds = (eqs || []).map((eq: any) => eq.question_id);
+      const qIds = ((eqs || []) as ExamQuestionRow[]).map((eq) => eq.question_id);
 
       const [{ data: qs }, { data: opts }, { data: ans }] = await Promise.all([
         supabase.from("questions").select("*").in("id", qIds),
@@ -55,26 +63,26 @@ export default function ResultReview() {
         supabase.from("attempt_answers").select("*").eq("attempt_id", attemptId),
       ]);
 
-      const qMap = new Map((qs || []).map((q: any) => [q.id, q]));
-      const optMap = new Map<string, any[]>();
-      (opts || []).forEach((o: any) => {
+      const qMap = new Map(((qs || []) as QuestionRow[]).map((q) => [q.id, q]));
+      const optMap = new Map<string, QuestionOptionRow[]>();
+      ((opts || []) as QuestionOptionRow[]).forEach((o) => {
         const arr = optMap.get(o.question_id) || [];
         arr.push(o);
         optMap.set(o.question_id, arr);
       });
-      const ansMap = new Map((ans || []).map((a: any) => [a.question_id, a]));
+      const ansMap = new Map(((ans || []) as AttemptAnswerRow[]).map((a) => [a.question_id, a]));
 
       const result: AnswerDetail[] = qIds.map(id => {
-        const q = qMap.get(id) || {};
-        const a = ansMap.get(id) || {};
+        const q = qMap.get(id);
+        const a = ansMap.get(id);
         return {
-          question_text: q.question_text || "",
-          question_type: q.question_type || "mcq",
-          selected_option_ids: a.selected_option_ids || [],
-          fill_answer: a.fill_answer || null,
-          is_correct: a.is_correct ?? null,
-          explanation: q.explanation || null,
-          options: (optMap.get(id) || []).map((o: any) => ({
+          question_text: q?.question_text || "",
+          question_type: q?.question_type || "mcq",
+          selected_option_ids: a?.selected_option_ids || [],
+          fill_answer: a?.fill_answer || null,
+          is_correct: a?.is_correct ?? null,
+          explanation: q?.explanation || null,
+          options: (optMap.get(id) || []).map((o) => ({
             id: o.id, option_text: o.option_text, is_correct: o.is_correct, explanation: o.explanation,
           })),
         };
@@ -113,7 +121,7 @@ export default function ResultReview() {
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Card>
             <CardContent className="pt-4 text-center">
-              <p className="text-2xl font-bold">{Number(attempt.score).toFixed(1)}%</p>
+              <p className="text-2xl font-bold">{Number(attempt.score ?? 0).toFixed(1)}%</p>
               <p className="text-xs text-muted-foreground">স্কোর</p>
             </CardContent>
           </Card>

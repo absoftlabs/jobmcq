@@ -9,13 +9,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Eye } from "lucide-react";
+import type { Enums, Tables } from "@/integrations/supabase/types";
+
+type ReportStatus = Enums<"report_status">;
+type QuestionReportRow = Tables<"question_reports">;
+type QuestionTextRow = Pick<Tables<"questions">, "id" | "question_text">;
 
 interface Report {
   id: string;
   question_id: string;
   report_type: string;
   message: string | null;
-  status: string;
+  status: ReportStatus;
   admin_note: string | null;
   created_at: string;
   question_text?: string;
@@ -24,10 +29,10 @@ interface Report {
 export default function AdminReports() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | ReportStatus>("all");
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [adminNote, setAdminNote] = useState("");
-  const [newStatus, setNewStatus] = useState("pending");
+  const [newStatus, setNewStatus] = useState<ReportStatus>("pending");
   const { toast } = useToast();
 
   const fetchReports = async () => {
@@ -37,10 +42,11 @@ export default function AdminReports() {
       .order("created_at", { ascending: false });
 
     if (data) {
-      const qIds = [...new Set(data.map((r: any) => r.question_id))];
+      const qIds = [...new Set(data.map((r) => r.question_id))];
       const { data: qs } = await supabase.from("questions").select("id, question_text").in("id", qIds);
-      const qMap = new Map((qs || []).map((q: any) => [q.id, q.question_text]));
-      setReports(data.map((r: any) => ({ ...r, question_text: qMap.get(r.question_id) || "—" })));
+      const typedQuestions = (qs || []) as QuestionTextRow[];
+      const qMap = new Map(typedQuestions.map((q) => [q.id, q.question_text]));
+      setReports((data as QuestionReportRow[]).map((r) => ({ ...r, question_text: qMap.get(r.question_id) || "—" })));
     }
     setLoading(false);
   };
@@ -50,7 +56,7 @@ export default function AdminReports() {
   const handleUpdate = async () => {
     if (!selectedReport) return;
     const { error } = await supabase.from("question_reports").update({
-      status: newStatus as any, admin_note: adminNote || null,
+      status: newStatus, admin_note: adminNote || null,
     }).eq("id", selectedReport.id);
     if (error) { toast({ title: "আপডেট ব্যর্থ", variant: "destructive" }); return; }
     toast({ title: "রিপোর্ট আপডেট হয়েছে" });
@@ -58,8 +64,8 @@ export default function AdminReports() {
     fetchReports();
   };
 
-  const statusLabel: Record<string, string> = { pending: "পেন্ডিং", reviewed: "পর্যালোচিত", fixed: "সমাধান", rejected: "বাতিল" };
-  const statusColor: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  const statusLabel: Record<ReportStatus, string> = { pending: "পেন্ডিং", reviewed: "পর্যালোচিত", fixed: "সমাধান", rejected: "বাতিল" };
+  const statusColor: Record<ReportStatus, "default" | "secondary" | "destructive" | "outline"> = {
     pending: "outline", reviewed: "secondary", fixed: "default", rejected: "destructive",
   };
   const reportTypeLabel: Record<string, string> = {
@@ -73,7 +79,7 @@ export default function AdminReports() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">রিপোর্ট ম্যানেজমেন্ট</h1>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as "all" | ReportStatus)}>
           <SelectTrigger className="w-40"><SelectValue placeholder="স্ট্যাটাস" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">সব</SelectItem>
@@ -106,7 +112,7 @@ export default function AdminReports() {
               )}
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">স্ট্যাটাস আপডেট:</p>
-                <Select value={newStatus} onValueChange={setNewStatus}>
+                <Select value={newStatus} onValueChange={(v) => setNewStatus(v as ReportStatus)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pending">পেন্ডিং</SelectItem>
@@ -169,3 +175,4 @@ export default function AdminReports() {
     </div>
   );
 }
+

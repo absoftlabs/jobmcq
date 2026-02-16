@@ -11,6 +11,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Edit, Trash2, X } from "lucide-react";
+import type { Enums, Tables } from "@/integrations/supabase/types";
+
+type QuestionType = Enums<"question_type">;
+type DifficultyLevel = Enums<"difficulty_level">;
+type QuestionRow = Tables<"questions">;
+type QuestionOptionRow = Tables<"question_options">;
 
 interface QuestionOption {
   id?: string;
@@ -23,10 +29,10 @@ interface QuestionOption {
 interface Question {
   id: string;
   question_text: string;
-  question_type: string;
+  question_type: QuestionType;
   category: string | null;
   topic: string | null;
-  difficulty: string;
+  difficulty: DifficultyLevel;
   explanation: string | null;
   created_at: string;
   question_options?: QuestionOption[];
@@ -44,10 +50,10 @@ export default function AdminQuestions() {
 
   // Form state
   const [formText, setFormText] = useState("");
-  const [formType, setFormType] = useState("mcq");
+  const [formType, setFormType] = useState<QuestionType>("mcq");
   const [formCategory, setFormCategory] = useState("");
   const [formTopic, setFormTopic] = useState("");
-  const [formDifficulty, setFormDifficulty] = useState("medium");
+  const [formDifficulty, setFormDifficulty] = useState<DifficultyLevel>("medium");
   const [formExplanation, setFormExplanation] = useState("");
   const [formOptions, setFormOptions] = useState<QuestionOption[]>([
     { option_text: "", is_correct: false, explanation: "", sort_order: 0 },
@@ -61,7 +67,7 @@ export default function AdminQuestions() {
       .from("questions")
       .select("*")
       .order("created_at", { ascending: false });
-    if (data) setQuestions(data as any);
+    if (data) setQuestions(data as QuestionRow[]);
     if (error) toast({ title: "ত্রুটি", description: error.message, variant: "destructive" });
     setLoading(false);
   };
@@ -94,7 +100,7 @@ export default function AdminQuestions() {
       .eq("question_id", q.id)
       .order("sort_order");
     if (opts && opts.length > 0) {
-      setFormOptions(opts.map((o: any) => ({
+      setFormOptions(opts.map((o: QuestionOptionRow) => ({
         id: o.id, option_text: o.option_text, is_correct: o.is_correct,
         explanation: o.explanation || "", sort_order: o.sort_order,
       })));
@@ -113,9 +119,9 @@ export default function AdminQuestions() {
 
     if (editingQuestion) {
       const { error } = await supabase.from("questions").update({
-        question_text: formText, question_type: formType as any,
+        question_text: formText, question_type: formType,
         category: formCategory || null, topic: formTopic || null,
-        difficulty: formDifficulty as any, explanation: formExplanation || null,
+        difficulty: formDifficulty, explanation: formExplanation || null,
       }).eq("id", editingQuestion.id);
 
       if (error) { toast({ title: "আপডেট ব্যর্থ", description: error.message, variant: "destructive" }); return; }
@@ -132,16 +138,16 @@ export default function AdminQuestions() {
       toast({ title: "প্রশ্ন আপডেট হয়েছে" });
     } else {
       const { data: newQ, error } = await supabase.from("questions").insert({
-        question_text: formText, question_type: formType as any,
+        question_text: formText, question_type: formType,
         category: formCategory || null, topic: formTopic || null,
-        difficulty: formDifficulty as any, explanation: formExplanation || null,
+        difficulty: formDifficulty, explanation: formExplanation || null,
       }).select().single();
 
       if (error || !newQ) { toast({ title: "তৈরি ব্যর্থ", description: error?.message, variant: "destructive" }); return; }
 
       if (formType !== "fill_blank") {
         const opts = formOptions.filter(o => o.option_text.trim()).map((o, i) => ({
-          question_id: (newQ as any).id, option_text: o.option_text,
+          question_id: newQ.id, option_text: o.option_text,
           is_correct: o.is_correct, explanation: o.explanation || null, sort_order: i,
         }));
         await supabase.from("question_options").insert(opts);
@@ -168,9 +174,9 @@ export default function AdminQuestions() {
     setFormOptions(formOptions.filter((_, i) => i !== idx));
   };
 
-  const updateOption = (idx: number, field: string, value: any) => {
+  const updateOption = <K extends keyof QuestionOption>(idx: number, field: K, value: QuestionOption[K]) => {
     const updated = [...formOptions];
-    (updated[idx] as any)[field] = value;
+    updated[idx] = { ...updated[idx], [field]: value };
     if (field === "is_correct" && value && formType === "mcq") {
       updated.forEach((o, i) => { if (i !== idx) o.is_correct = false; });
     }

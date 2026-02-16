@@ -7,17 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, FileText, PlayCircle } from "lucide-react";
+import type { Tables } from "@/integrations/supabase/types";
 
-interface Exam {
-  id: string;
-  title: string;
-  description: string | null;
-  total_questions: number;
-  duration_minutes: number;
-  pass_mark: number;
-  max_attempts: number;
-  reward_coins: number;
-}
+type Exam = Pick<
+  Tables<"exams">,
+  "id" | "title" | "description" | "total_questions" | "duration_minutes" | "pass_mark" | "max_attempts" | "reward_coins"
+>;
+type AttemptExamId = Pick<Tables<"attempts">, "exam_id">;
 
 export default function LiveExams() {
   const [exams, setExams] = useState<Exam[]>([]);
@@ -29,20 +25,26 @@ export default function LiveExams() {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from("exams").select("*").eq("status", "live");
-      setExams((data || []) as any);
+      try {
+        const { data } = await supabase.from("exams").select("*").eq("status", "live");
+        setExams(data || []);
 
-      if (user && data) {
-        const { data: attempts } = await supabase
-          .from("attempts")
-          .select("exam_id")
-          .eq("user_id", user.id)
-          .not("submitted_at", "is", null);
-        const counts: Record<string, number> = {};
-        (attempts || []).forEach((a: any) => { counts[a.exam_id] = (counts[a.exam_id] || 0) + 1; });
-        setAttemptCounts(counts);
+        if (user && data) {
+          const { data: attempts } = await supabase
+            .from("attempts")
+            .select("exam_id")
+            .eq("user_id", user.id)
+            .not("submitted_at", "is", null);
+          const counts: Record<string, number> = {};
+          const typedAttempts = (attempts || []) as AttemptExamId[];
+          typedAttempts.forEach((a) => { counts[a.exam_id] = (counts[a.exam_id] || 0) + 1; });
+          setAttemptCounts(counts);
+        } else {
+          setAttemptCounts({});
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetch();
   }, [user]);
@@ -79,7 +81,7 @@ export default function LiveExams() {
     if (error || !attempt) {
       toast({ title: "পরিক্ষা শুরু করা যায়নি", description: error?.message, variant: "destructive" }); return;
     }
-    navigate(`/student/exam/${(attempt as any).id}`);
+    navigate(`/student/exam/${attempt.id}`);
   };
 
   if (loading) {
