@@ -26,10 +26,16 @@ export default function ResultReview() {
 
   useEffect(() => {
     const fetch = async () => {
-      if (!attemptId) return;
+      if (!attemptId) {
+        setLoading(false);
+        return;
+      }
 
       const { data: att } = await supabase.from("attempts").select("*").eq("id", attemptId).single();
-      if (!att) return;
+      if (!att) {
+        setLoading(false);
+        return;
+      }
       setAttempt(att);
 
       const { data: exam } = await supabase.from("exams").select("title").eq("id", (att as any).exam_id).single();

@@ -37,6 +37,7 @@ export default function ExamScreen() {
   const [reportType, setReportType] = useState("wrong_answer");
   const [reportMessage, setReportMessage] = useState("");
   const [shuffleOptions, setShuffleOptions] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -58,10 +59,11 @@ export default function ExamScreen() {
       setStartedAt(new Date((attempt as any).started_at));
 
       const { data: exam } = await supabase.from("exams").select("*").eq("id", examId).single();
+      const shouldShuffle = Boolean((exam as any)?.shuffle_options);
       if (exam) {
         setExamTitle((exam as any).title);
         setDurationMinutes((exam as any).duration_minutes);
-        setShuffleOptions((exam as any).shuffle_options);
+        setShuffleOptions(shouldShuffle);
       }
 
       const { data: eqs } = await supabase
@@ -85,7 +87,7 @@ export default function ExamScreen() {
       const ordered: Question[] = qIds.map(id => {
         const q = qMap.get(id);
         let qOpts = optMap.get(id) || [];
-        if (shuffleOptions) qOpts = qOpts.sort(() => Math.random() - 0.5);
+        if (shouldShuffle) qOpts = [...qOpts].sort(() => Math.random() - 0.5);
         return { id, question_text: q?.question_text || "", question_type: q?.question_type || "mcq", options: qOpts };
       });
 
@@ -104,7 +106,7 @@ export default function ExamScreen() {
       setLoading(false);
     };
     fetch();
-  }, [attemptId]);
+  }, [attemptId, navigate]);
 
   // Timer
   useEffect(() => {
@@ -113,12 +115,12 @@ export default function ExamScreen() {
     const tick = () => {
       const remaining = Math.max(0, Math.floor((endTime.getTime() - Date.now()) / 1000));
       setTimeLeft(remaining);
-      if (remaining <= 0) handleSubmit();
+      if (remaining <= 0 && !submitting) handleSubmit();
     };
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [loading, startedAt, durationMinutes]);
+  }, [loading, startedAt, durationMinutes, submitting]);
 
   const saveAnswer = useCallback((qId: string, selectedIds: string[], fillAns?: string) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -151,7 +153,8 @@ export default function ExamScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!attemptId) return;
+    if (!attemptId || submitting) return;
+    setSubmitting(true);
     setConfirmOpen(false);
 
     // Calculate score
@@ -178,7 +181,7 @@ export default function ExamScreen() {
 
       if (selected.length === 0 && !fillAnswers[q.id]) {
         skipped++;
-        answerUpdates.push({ attempt_id: attemptId, question_id: q.id, selected_option_ids: [], is_correct: false });
+        answerUpdates.push({ attempt_id: attemptId, question_id: q.id, selected_option_ids: [], is_correct: null });
         return;
       }
 

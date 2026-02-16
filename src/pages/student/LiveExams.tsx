@@ -61,7 +61,9 @@ export default function LiveExams() {
       .eq("exam_id", exam.id)
       .eq("user_id", user.id)
       .is("submitted_at", null)
-      .single();
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (existing) {
       navigate(`/student/exam/${existing.id}`);
