@@ -1,7 +1,12 @@
-import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
-const Index = () => {
+interface Props {
+  children: React.ReactNode;
+  requiredRole?: "admin" | "student";
+}
+
+export default function ProtectedRoute({ children, requiredRole }: Props) {
   const { user, loading, hasRole } = useAuth();
 
   if (loading) {
@@ -13,8 +18,7 @@ const Index = () => {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (hasRole("admin")) return <Navigate to="/admin" replace />;
-  return <Navigate to="/student" replace />;
-};
+  if (requiredRole && !hasRole(requiredRole)) return <Navigate to="/" replace />;
 
-export default Index;
+  return <>{children}</>;
+}
