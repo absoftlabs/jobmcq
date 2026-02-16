@@ -1,4 +1,6 @@
 -- Extend public leaderboard payload with earned coins and total submitted exams.
+DROP FUNCTION IF EXISTS public.get_public_leaderboard(UUID, INTEGER);
+
 CREATE OR REPLACE FUNCTION public.get_public_leaderboard(p_exam_id UUID, p_limit INTEGER DEFAULT 10)
 RETURNS TABLE (
   rank BIGINT,

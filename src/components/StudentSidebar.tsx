@@ -1,20 +1,34 @@
 import {
-  LayoutDashboard, BookOpen, Trophy, Coins, ClipboardList, LogOut,
+  LayoutDashboard,
+  BookOpen,
+  Trophy,
+  Coins,
+  ClipboardList,
+  LogOut,
+  GraduationCap,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
-  SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 
 const menuItems = [
   { title: "ড্যাশবোর্ড", url: "/student", icon: LayoutDashboard },
-  { title: "লাইভ পরিক্ষা", url: "/student/exams", icon: BookOpen },
-  { title: "আমার পরিক্ষা", url: "/student/my-exams", icon: ClipboardList },
+  { title: "আমার কোর্স", url: "/student/courses", icon: GraduationCap },
+  { title: "লাইভ পরীক্ষা", url: "/student/exams", icon: BookOpen },
+  { title: "আমার পরীক্ষা", url: "/student/my-exams", icon: ClipboardList },
   { title: "লিডারবোর্ড", url: "/student/leaderboard", icon: Trophy },
-  { title: "কয়েন ওয়ালেট", url: "/student/wallet", icon: Coins },
+  { title: "কয়েন ওয়ালেট", url: "/student/wallet", icon: Coins },
 ];
 
 export function StudentSidebar() {
@@ -26,7 +40,7 @@ export function StudentSidebar() {
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
           <BookOpen className="h-4 w-4" />
         </div>
-        <span className="font-semibold text-sidebar-foreground">MCQ পরিক্ষা</span>
+        <span className="font-semibold text-sidebar-foreground">MCQ পরীক্ষা</span>
       </div>
       <SidebarContent>
         <SidebarGroup>
@@ -53,10 +67,15 @@ export function StudentSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border p-4">
-        <div className="mb-2 text-xs text-sidebar-foreground/70 truncate">
+        <div className="mb-2 truncate text-xs text-sidebar-foreground/70">
           {profile?.full_name || "শিক্ষার্থী"}
         </div>
-        <Button variant="ghost" size="sm" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent" onClick={signOut}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+          onClick={signOut}
+        >
           <LogOut className="mr-2 h-4 w-4" /> লগআউট
         </Button>
       </SidebarFooter>

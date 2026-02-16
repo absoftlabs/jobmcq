@@ -23,6 +23,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [profile, setProfile] = useState<{ full_name: string; coin_balance: number } | null>(null);
 
+  const updateLastLogin = async (userId: string) => {
+    await supabase
+      .from("profiles")
+      .update({ last_login_at: new Date().toISOString() })
+      .eq("user_id", userId);
+  };
+
   const fetchUserData = async (userId: string) => {
     try {
       const [rolesRes, profileRes] = await Promise.all([
@@ -77,11 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     void initSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
+          if (event === "SIGNED_IN") {
+            void updateLastLogin(session.user.id);
+          }
           void fetchUserData(session.user.id);
         } else {
           setRoles([]);

@@ -18,7 +18,7 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     const form = new FormData(e.currentTarget);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: form.get("email") as string,
       password: form.get("password") as string,
     });
@@ -26,6 +26,12 @@ export default function Auth() {
     if (error) {
       toast({ title: "লগইন ব্যর্থ", description: error.message, variant: "destructive" });
     } else {
+      if (data.user) {
+        await supabase
+          .from("profiles")
+          .update({ last_login_at: new Date().toISOString() })
+          .eq("user_id", data.user.id);
+      }
       navigate("/");
     }
   };

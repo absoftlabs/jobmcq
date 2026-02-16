@@ -1,10 +1,15 @@
-import {
+﻿import {
   LayoutDashboard,
   BookOpen,
+  GraduationCap,
   FileText,
   Users,
   Flag,
+  FolderTree,
+  PlusSquare,
+  ListOrdered,
   LogOut,
+  WalletCards,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,12 +26,19 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 
-const menuItems = [
+const mainMenuItems = [
   { title: "ড্যাশবোর্ড", url: "/admin", icon: LayoutDashboard },
   { title: "প্রশ্ন ব্যাংক", url: "/admin/questions", icon: BookOpen },
-  { title: "পরিক্ষা", url: "/admin/exams", icon: FileText },
-  { title: "পরিক্ষার্থী", url: "/admin/users", icon: Users },
+  { title: "পরীক্ষা", url: "/admin/exams", icon: FileText },
+  { title: "পরীক্ষার্থী", url: "/admin/users", icon: Users },
   { title: "রিপোর্ট", url: "/admin/reports", icon: Flag },
+  { title: "পেমেন্ট গেটওয়ে", url: "/admin/payment-gateway", icon: WalletCards },
+];
+
+const courseMenuItems = [
+  { title: "এ্যাড কোর্স", url: "/admin/courses/manage", icon: PlusSquare },
+  { title: "লেসন", url: "/admin/courses/lessons", icon: ListOrdered },
+  { title: "ক্যাটাগরি", url: "/admin/courses/categories", icon: FolderTree },
 ];
 
 export function AdminSidebar() {
@@ -36,16 +48,17 @@ export function AdminSidebar() {
     <Sidebar className="border-r-0">
       <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-          <BookOpen className="h-4 w-4" />
+          <GraduationCap className="h-4 w-4" />
         </div>
         <span className="font-semibold text-sidebar-foreground">MCQ Admin</span>
       </div>
+
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>মেনু</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {mainMenuItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild>
                     <NavLink
@@ -63,9 +76,32 @@ export function AdminSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>কোর্স</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {courseMenuItems.map((item) => (
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
+
       <SidebarFooter className="border-t border-sidebar-border p-4">
-        <div className="mb-2 text-xs text-sidebar-foreground/70 truncate">
+        <div className="mb-2 truncate text-xs text-sidebar-foreground/70">
           {profile?.full_name || "Admin"}
         </div>
         <Button

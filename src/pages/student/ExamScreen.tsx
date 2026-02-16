@@ -65,6 +65,26 @@ export default function ExamScreen() {
         return;
       }
 
+      const { data: authData } = await supabase.auth.getUser();
+      const currentUser = authData.user;
+      if (currentUser) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("account_status")
+          .eq("user_id", currentUser.id)
+          .maybeSingle();
+
+        if (profile?.account_status === "suspended" || profile?.account_status === "deleted") {
+          toast({
+            title: "আপনার একাউন্ট সীমাবদ্ধ",
+            description: "আপনি বর্তমানে পরীক্ষা দিতে পারবেন না।",
+            variant: "destructive",
+          });
+          navigate("/student/exams");
+          return;
+        }
+      }
+
       const examId = attempt.exam_id;
       setStartedAt(new Date(attempt.started_at));
 

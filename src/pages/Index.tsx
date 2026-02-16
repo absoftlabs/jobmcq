@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+﻿import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Clock3, FileText, Coins, ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
+import { Trophy, Clock3, FileText, Coins, ArrowRight, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface PublicExam {
@@ -25,15 +26,26 @@ interface PublicLeaderboardRow {
   points: number;
   passed_exams: number;
 }
+interface CourseEnrollmentCountRow {
+  course_id: string;
+  total: number;
+}
 
-type ProfileLite = Pick<Tables<"profiles">, "user_id" | "full_name" | "coin_balance">;
-type PassedAttemptLite = Pick<Tables<"attempts">, "user_id">;
+type PublicCourse = Pick<Tables<"courses">, "id" | "title" | "slug" | "summary" | "thumbnail_url" | "status" | "is_paid" | "price" | "currency">;
+type EnrolledCourse = Pick<Tables<"course_enrollments">, "course_id">;
 
 export default function Index() {
   const { user, hasRole } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [loadingExams, setLoadingExams] = useState(true);
+  const [loadingCourses, setLoadingCourses] = useState(true);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
   const [exams, setExams] = useState<PublicExam[]>([]);
+  const [courses, setCourses] = useState<PublicCourse[]>([]);
+  const [courseEnrollmentCounts, setCourseEnrollmentCounts] = useState<Record<string, number>>({});
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<string>>(new Set());
+  const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
   const [leaderboard, setLeaderboard] = useState<PublicLeaderboardRow[]>([]);
 
   const dashboardPath = useMemo(() => {
@@ -61,37 +73,60 @@ export default function Index() {
   }, []);
 
   useEffect(() => {
+    const fetchCourses = async () => {
+      setLoadingCourses(true);
+      try {
+        const { data } = await supabase
+          .from("courses")
+          .select("id, title, slug, summary, thumbnail_url, status, is_paid, price, currency")
+          .eq("status", "published")
+          .order("created_at", { ascending: false })
+          .limit(8);
+
+        const rows = (data || []) as PublicCourse[];
+        setCourses(rows);
+        const courseIds = rows.map((c) => c.id);
+
+        if (courseIds.length > 0) {
+          const { data: countRows } = await supabase.rpc("get_course_enrollment_counts", {
+            course_ids: courseIds,
+          });
+
+          const counts: Record<string, number> = {};
+          ((countRows || []) as CourseEnrollmentCountRow[]).forEach((item) => {
+            counts[item.course_id] = Number(item.total || 0);
+          });
+          setCourseEnrollmentCounts(counts);
+        } else {
+          setCourseEnrollmentCounts({});
+        }
+
+        if (user && courseIds.length > 0) {
+          const { data: enrollments } = await supabase
+            .from("course_enrollments")
+            .select("course_id")
+            .eq("user_id", user.id)
+            .in("course_id", courseIds);
+
+          const enrolled = new Set(((enrollments || []) as EnrolledCourse[]).map((e) => e.course_id));
+          setEnrolledCourseIds(enrolled);
+        } else {
+          setEnrolledCourseIds(new Set());
+        }
+      } finally {
+        setLoadingCourses(false);
+      }
+    };
+
+    void fetchCourses();
+  }, [user]);
+
+  useEffect(() => {
     const fetchLeaderboard = async () => {
       setLoadingLeaderboard(true);
       try {
-        const [{ data: profiles }, { data: passedAttempts }] = await Promise.all([
-          supabase.from("profiles").select("user_id, full_name, coin_balance"),
-          supabase.from("attempts").select("user_id").eq("is_passed", true).not("submitted_at", "is", null),
-        ]);
-
-        const typedProfiles = (profiles || []) as ProfileLite[];
-        const typedPassed = (passedAttempts || []) as PassedAttemptLite[];
-
-        const passedCountMap = new Map<string, number>();
-        typedPassed.forEach((a) => {
-          passedCountMap.set(a.user_id, (passedCountMap.get(a.user_id) || 0) + 1);
-        });
-
-        const ranked = typedProfiles
-          .map((p) => ({
-            user_id: p.user_id,
-            full_name: p.full_name || "-",
-            points: p.coin_balance ?? 0,
-            passed_exams: passedCountMap.get(p.user_id) || 0,
-          }))
-          .sort((a, b) => b.points - a.points || b.passed_exams - a.passed_exams || a.full_name.localeCompare(b.full_name))
-          .slice(0, 10)
-          .map((row, index) => ({
-            rank: index + 1,
-            ...row,
-          }));
-
-        setLeaderboard(ranked);
+        const { data } = await supabase.rpc("get_public_global_leaderboard", { p_limit: 10 });
+        setLeaderboard((data || []) as PublicLeaderboardRow[]);
       } finally {
         setLoadingLeaderboard(false);
       }
@@ -101,6 +136,51 @@ export default function Index() {
   }, []);
 
   const liveExams = exams.filter((e) => e.status === "live");
+
+  const enrollCourse = async (course: PublicCourse) => {
+    const courseId = course.id;
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    if (course.is_paid) {
+      navigate(`/courses/${course.slug}`);
+      toast({ title: "এটি পেইড কোর্স", description: "bKash পেমেন্ট করে এনরোল সম্পন্ন করুন।" });
+      return;
+    }
+    if (enrolledCourseIds.has(courseId)) {
+      toast({ title: "আপনি ইতিমধ্যেই এনরোলড" });
+      return;
+    }
+
+    setEnrollingCourseId(courseId);
+    const { error } = await supabase.from("course_enrollments").insert({
+      course_id: courseId,
+      user_id: user.id,
+    });
+
+    if (error) {
+      const msg = error.message.toLowerCase();
+      if (msg.includes("duplicate") || msg.includes("unique")) {
+        setEnrolledCourseIds((prev) => new Set([...prev, courseId]));
+        if (hasRole("student")) {
+          navigate(`/student/courses/${courseId}/learn`);
+        }
+        toast({ title: "আপনি ইতিমধ্যেই এনরোলড" });
+      } else {
+        toast({ title: "এনরোল ব্যর্থ", description: error.message, variant: "destructive" });
+      }
+      setEnrollingCourseId(null);
+      return;
+    }
+
+    setEnrolledCourseIds((prev) => new Set([...prev, courseId]));
+    setEnrollingCourseId(null);
+    toast({ title: "এনরোল সফল হয়েছে" });
+    if (hasRole("student")) {
+      navigate(`/student/courses/${courseId}/learn`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -223,6 +303,62 @@ export default function Index() {
               </CardContent>
             </Card>
           </div>
+        </section>
+
+        <section id="courses" className="space-y-6">
+          <div className="space-y-2 text-left">
+            <h2 className="text-3xl font-black tracking-tight">কোর্স সমূহ</h2>
+            <p className="text-sm text-muted-foreground">কার্ডে ক্লিক করে বিস্তারিত দেখুন এবং এনরোল করুন</p>
+          </div>
+
+          {loadingCourses ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : courses.length === 0 ? (
+            <Card>
+              <CardContent className="py-10 text-center text-muted-foreground">এখনো কোনো published course নেই।</CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {courses.map((course) => {
+                const enrolled = enrolledCourseIds.has(course.id);
+                const busy = enrollingCourseId === course.id;
+                return (
+                  <Card key={course.id} className="flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                    <div className="h-40 w-full overflow-hidden border-b bg-muted/20">
+                      {course.thumbnail_url ? (
+                        <img src={course.thumbnail_url} alt={course.title} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No Thumbnail</div>
+                      )}
+                    </div>
+                    <CardHeader>
+                      <CardTitle className="line-clamp-2 text-lg">{course.title}</CardTitle>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Users className="h-3.5 w-3.5" />
+                        <span>{courseEnrollmentCounts[course.id] || 0} জন এনরোল করেছে</span>
+                      </div>
+                      <CardDescription className="line-clamp-2 min-h-10">
+                        {course.summary || "এই কোর্সে ধাপে ধাপে প্রস্তুতির কনটেন্ট রয়েছে।"}
+                      </CardDescription>
+                      <Badge variant={course.is_paid ? "default" : "secondary"} className="w-fit">
+                        {course.is_paid ? `পেইড - ৳${Number(course.price || 0).toFixed(2)}` : "ফ্রি"}
+                      </Badge>
+                    </CardHeader>
+                    <CardContent className="mt-auto space-y-2">
+                      <Link to={`/courses/${course.slug}`} className="block">
+                        <Button variant="outline" className="w-full">বিস্তারিত দেখুন</Button>
+                      </Link>
+                      <Button className="w-full" onClick={() => void enrollCourse(course)} disabled={enrolled || busy}>
+                        {enrolled ? "ইতিমধ্যেই এনরোলড" : busy ? "Enrolling..." : course.is_paid ? "পেমেন্ট করে এনরোল" : "এনরোল করুন"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         <section id="exams" className="space-y-6">
@@ -348,3 +484,7 @@ export default function Index() {
     </div>
   );
 }
+
+
+
+
