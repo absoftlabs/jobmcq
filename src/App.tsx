@@ -19,6 +19,7 @@ import AdminCourseCategories from "./pages/admin/courses/Categories";
 import AdminManageCourses from "./pages/admin/courses/Manage";
 import AdminCourseLessons from "./pages/admin/courses/Lessons";
 import AdminPaymentGateway from "./pages/admin/PaymentGateway";
+import AdminFlashCards from "./pages/admin/FlashCards";
 import StudentDashboard from "./pages/student/Dashboard";
 import LiveExams from "./pages/student/LiveExams";
 import ExamScreen from "./pages/student/ExamScreen";
@@ -30,6 +31,9 @@ import CourseDetails from "./pages/CourseDetails";
 import MyCourses from "./pages/student/MyCourses";
 import CourseLearn from "./pages/student/CourseLearn";
 import BkashCallback from "./pages/BkashCallback";
+import FlashCardsPublic from "./pages/FlashCards";
+import GuestFlashCardGame from "./pages/GuestFlashCardGame";
+import FlashCardGame from "./pages/student/FlashCardGame";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +49,8 @@ const App = () => (
             <Route path="/courses/:slug" element={<CourseDetails />} />
             <Route path="/payment/bkash/callback" element={<BkashCallback />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/flash-cards" element={<FlashCardsPublic />} />
+            <Route path="/play/flash-cards" element={<GuestFlashCardGame />} />
 
             {/* Admin routes */}
             <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout /></ProtectedRoute>}>
@@ -54,6 +60,7 @@ const App = () => (
               <Route path="users" element={<AdminUsers />} />
               <Route path="reports" element={<AdminReports />} />
               <Route path="payment-gateway" element={<AdminPaymentGateway />} />
+              <Route path="flash-cards" element={<AdminFlashCards />} />
               <Route path="courses" element={<Navigate to="/admin/courses/manage" replace />} />
               <Route path="courses/categories" element={<AdminCourseCategories />} />
               <Route path="courses/manage" element={<AdminManageCourses />} />
@@ -71,6 +78,7 @@ const App = () => (
               <Route path="courses/:courseId/learn" element={<CourseLearn />} />
               <Route path="leaderboard" element={<Leaderboard />} />
               <Route path="wallet" element={<Wallet />} />
+              <Route path="flash-cards" element={<FlashCardGame />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

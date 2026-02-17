@@ -148,4 +148,13 @@
   .animate-fade-rise {
     animation: fade-rise 700ms ease-out both;
   }
+
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  .backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
 }

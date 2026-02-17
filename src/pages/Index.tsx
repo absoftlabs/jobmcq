@@ -203,6 +203,7 @@ export default function Index() {
             <nav className="hidden items-center gap-6 text-sm md:flex">
               <a href="#features" className="text-muted-foreground transition-colors hover:text-foreground">ফিচার</a>
               <a href="#exams" className="text-muted-foreground transition-colors hover:text-foreground">লাইভ এক্সাম</a>
+              <Link to="/flash-cards" className="text-muted-foreground transition-colors hover:text-foreground">ফ্ল্যাশ কার্ড</Link>
               <a href="#leaderboard" className="text-muted-foreground transition-colors hover:text-foreground">লিডারবোর্ড</a>
             </nav>
 
@@ -461,6 +462,7 @@ export default function Index() {
             <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
               <a href="#features" className="hover:text-foreground">ফিচার</a>
               <a href="#exams" className="hover:text-foreground">লাইভ এক্সাম</a>
+              <Link to="/flash-cards" className="hover:text-foreground">ফ্ল্যাশ কার্ড</Link>
               <a href="#leaderboard" className="hover:text-foreground">লিডারবোর্ড</a>
             </div>
           </div>

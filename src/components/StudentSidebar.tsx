@@ -6,6 +6,7 @@ import {
   ClipboardList,
   LogOut,
   GraduationCap,
+  Layers,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +27,7 @@ const menuItems = [
   { title: "ড্যাশবোর্ড", url: "/student", icon: LayoutDashboard },
   { title: "আমার কোর্স", url: "/student/courses", icon: GraduationCap },
   { title: "লাইভ পরীক্ষা", url: "/student/exams", icon: BookOpen },
+  { title: "ফ্ল্যাশ কার্ড", url: "/student/flash-cards", icon: Layers },
   { title: "আমার পরীক্ষা", url: "/student/my-exams", icon: ClipboardList },
   { title: "লিডারবোর্ড", url: "/student/leaderboard", icon: Trophy },
   { title: "কয়েন ওয়ালেট", url: "/student/wallet", icon: Coins },
