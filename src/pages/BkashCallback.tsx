@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -23,17 +23,26 @@ export default function BkashCallback() {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke("bkash-checkout", {
-        body: {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/bkash-checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({
           action: "execute",
           paymentID,
           status: callbackStatus || "success",
-        },
+        }),
       });
 
-      if (error) {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const readable = typeof data?.details === "string"
+          ? data.details
+          : (data?.error || data?.message || "Payment verify failed");
         setStatus("failed");
-        toast({ title: "পেমেন্ট ভেরিফিকেশন ব্যর্থ", description: error.message, variant: "destructive" });
+        toast({ title: "পেমেন্ট ভেরিফিকেশন ব্যর্থ", description: readable, variant: "destructive" });
         setLoading(false);
         return;
       }
@@ -42,9 +51,7 @@ export default function BkashCallback() {
       if (resultStatus === "completed") {
         setStatus("completed");
         toast({ title: "পেমেন্ট সফল, এনরোল সম্পন্ন" });
-      } else if (resultStatus === "cancel") {
-        setStatus("cancelled");
-      } else if (resultStatus === "cancelled") {
+      } else if (resultStatus === "cancel" || resultStatus === "cancelled") {
         setStatus("cancelled");
       } else if (resultStatus === "failure" || resultStatus === "failed") {
         setStatus("failed");

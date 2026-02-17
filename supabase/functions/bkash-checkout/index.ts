@@ -3,11 +3,12 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 type Json = Record<string, unknown>;
 
-type BkashAction = "create" | "execute" | "query" | "search" | "refund";
+type BkashAction = "create" | "execute" | "query" | "search" | "refund" | "test";
 
 interface BkashCreateBody {
   action: "create";
   courseId: string;
+  userId?: string;
 }
 
 interface BkashExecuteBody {
@@ -35,7 +36,11 @@ interface BkashRefundBody {
   reason?: string;
 }
 
-type BkashBody = BkashCreateBody | BkashExecuteBody | BkashQueryBody | BkashSearchBody | BkashRefundBody;
+interface BkashTestBody {
+  action: "test";
+}
+
+type BkashBody = BkashCreateBody | BkashExecuteBody | BkashQueryBody | BkashSearchBody | BkashRefundBody | BkashTestBody;
 
 interface BkashRuntimeConfig {
   enabled: boolean;
@@ -69,6 +74,24 @@ const resolveCallbackUrl = (cfg: BkashRuntimeConfig) => {
   return `${cfg.frontendBaseUrl.replace(/\/$/, "")}/payment/bkash/callback`;
 };
 
+const cleanSecret = (value: string) =>
+  value
+    .replace(/\u200B/g, "")
+    .replace(/\u200C/g, "")
+    .replace(/\u200D/g, "")
+    .replace(/\uFEFF/g, "")
+    .replace(/\r/g, "")
+    .replace(/\n/g, "")
+    .trim();
+
+const cleanKeyLike = (value: string) => {
+  const v = cleanSecret(value);
+  if ((v.startsWith("\"") && v.endsWith("\"")) || (v.startsWith("'") && v.endsWith("'"))) {
+    return v.slice(1, -1).trim();
+  }
+  return v;
+};
+
 const getAuthUser = async (req: Request) => {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return null;
@@ -90,13 +113,13 @@ const isBkashSuccess = (data: Json) => {
 
 const resolveConfigFromEnv = (): BkashRuntimeConfig => ({
   enabled: true,
-  baseUrl: Deno.env.get("BKASH_BASE_URL") || DEFAULT_BASE_URL,
-  username: Deno.env.get("BKASH_USERNAME") || "",
-  password: Deno.env.get("BKASH_PASSWORD") || "",
-  appKey: Deno.env.get("BKASH_APP_KEY") || "",
-  appSecret: Deno.env.get("BKASH_APP_SECRET") || "",
-  callbackUrl: Deno.env.get("BKASH_CALLBACK_URL") || "",
-  frontendBaseUrl: Deno.env.get("FRONTEND_BASE_URL") || "",
+  baseUrl: cleanSecret(Deno.env.get("BKASH_BASE_URL") || DEFAULT_BASE_URL),
+  username: cleanSecret(Deno.env.get("BKASH_USERNAME") || ""),
+  password: cleanSecret(Deno.env.get("BKASH_PASSWORD") || ""),
+  appKey: cleanSecret(Deno.env.get("BKASH_APP_KEY") || ""),
+  appSecret: cleanSecret(Deno.env.get("BKASH_APP_SECRET") || ""),
+  callbackUrl: cleanSecret(Deno.env.get("BKASH_CALLBACK_URL") || ""),
+  frontendBaseUrl: cleanSecret(Deno.env.get("FRONTEND_BASE_URL") || ""),
 });
 
 const resolveBkashConfig = async (): Promise<BkashRuntimeConfig> => {
@@ -111,16 +134,24 @@ const resolveBkashConfig = async (): Promise<BkashRuntimeConfig> => {
   if (!data) return envCfg;
 
   const config = (data.config || {}) as Record<string, string>;
-  return {
+  const dbCfg: BkashRuntimeConfig = {
     enabled: data.is_enabled,
-    baseUrl: config.base_url || envCfg.baseUrl,
-    username: config.username || envCfg.username,
-    password: config.password || envCfg.password,
-    appKey: config.app_key || envCfg.appKey,
-    appSecret: config.app_secret || envCfg.appSecret,
-    callbackUrl: config.callback_url || envCfg.callbackUrl,
-    frontendBaseUrl: config.frontend_base_url || envCfg.frontendBaseUrl,
+    baseUrl: cleanSecret(config.base_url || ""),
+    username: cleanSecret(config.username || ""),
+    password: cleanSecret(config.password || ""),
+    appKey: cleanKeyLike(config.app_key || ""),
+    appSecret: cleanKeyLike(config.app_secret || ""),
+    callbackUrl: cleanSecret(config.callback_url || ""),
+    frontendBaseUrl: cleanSecret(config.frontend_base_url || ""),
   };
+
+  // If admin settings exist, prefer them strictly (avoid mixing stale env credentials).
+  // Keep only non-secret convenience fallbacks for URL fields.
+  if (dbCfg.baseUrl === "") dbCfg.baseUrl = envCfg.baseUrl || DEFAULT_BASE_URL;
+  if (dbCfg.callbackUrl === "") dbCfg.callbackUrl = envCfg.callbackUrl;
+  if (dbCfg.frontendBaseUrl === "") dbCfg.frontendBaseUrl = envCfg.frontendBaseUrl;
+
+  return dbCfg;
 };
 
 const validateConfig = (cfg: BkashRuntimeConfig) => {
@@ -238,9 +269,6 @@ Deno.serve(async (req) => {
     return fail(500, "Missing Supabase service configuration");
   }
 
-  const user = await getAuthUser(req);
-  if (!user) return fail(401, "Unauthorized");
-
   let body: BkashBody;
   try {
     body = (await req.json()) as BkashBody;
@@ -250,6 +278,7 @@ Deno.serve(async (req) => {
 
   const action = body.action as BkashAction;
   if (!action) return fail(400, "Action is required");
+  const user = await getAuthUser(req);
 
   const cfg = await resolveBkashConfig();
   if (!cfg.enabled && (action === "create" || action === "execute")) {
@@ -262,8 +291,11 @@ Deno.serve(async (req) => {
 
   try {
     if (action === "create") {
-      const { courseId } = body as BkashCreateBody;
+      const { courseId, userId } = body as BkashCreateBody;
       if (!courseId) return fail(400, "courseId is required");
+      const actorUserId = user?.id || userId || "";
+      if (!actorUserId) return fail(401, "Unauthorized");
+      if (user?.id && userId && user.id !== userId) return fail(403, "User mismatch");
 
       const [{ data: course }, { data: enrolled }] = await Promise.all([
         supabase
@@ -275,7 +307,7 @@ Deno.serve(async (req) => {
           .from("course_enrollments")
           .select("id")
           .eq("course_id", courseId)
-          .eq("user_id", user.id)
+          .eq("user_id", actorUserId)
           .maybeSingle(),
       ]);
 
@@ -294,10 +326,10 @@ Deno.serve(async (req) => {
         return fail(500, "Missing callback URL in gateway settings");
       }
 
-      const merchantInvoiceNumber = buildInvoice(user.id, courseId);
+      const merchantInvoiceNumber = buildInvoice(actorUserId, courseId);
       const createPayload = {
         mode: "0011",
-        payerReference: user.id.slice(0, 20),
+        payerReference: actorUserId.slice(0, 20),
         callbackURL,
         amount: Number(course.price || 0).toFixed(2),
         currency: String(course.currency || "BDT"),
@@ -317,7 +349,7 @@ Deno.serve(async (req) => {
       }
 
       const { error: paymentError } = await supabase.from("course_payments").insert({
-        user_id: user.id,
+        user_id: actorUserId,
         course_id: courseId,
         provider: "bkash",
         amount: Number(course.price || 0),
@@ -346,16 +378,14 @@ Deno.serve(async (req) => {
         await supabase
           .from("course_payments")
           .update({ status: normalizedStatus === "cancel" ? "cancelled" : "failed" })
-          .eq("payment_id", paymentID)
-          .eq("user_id", user.id);
+          .eq("payment_id", paymentID);
         return json(200, { status: normalizedStatus });
       }
 
       const { data: existingPayment } = await supabase
         .from("course_payments")
-        .select("id, course_id, status")
+        .select("id, user_id, course_id, status")
         .eq("payment_id", paymentID)
-        .eq("user_id", user.id)
         .maybeSingle();
 
       if (!existingPayment) {
@@ -400,7 +430,7 @@ Deno.serve(async (req) => {
       if (updateError) return fail(500, "Failed to update payment record", updateError.message);
 
       const { error: enrollError } = await supabase.from("course_enrollments").insert({
-        user_id: user.id,
+        user_id: existingPayment.user_id,
         course_id: existingPayment.course_id,
       });
       if (enrollError && !enrollError.message.toLowerCase().includes("duplicate")) {
@@ -438,6 +468,15 @@ Deno.serve(async (req) => {
       });
       if (!refunded.ok) return fail(502, "bKash refund failed", refunded.data);
       return json(200, refunded.data);
+    }
+
+    if (action === "test") {
+      const token = await grantToken(cfg);
+      return json(200, {
+        success: true,
+        message: "bKash Grant Token সফল",
+        hasRefreshToken: Boolean(token.refreshToken),
+      });
     }
 
     return fail(400, "Unsupported action");

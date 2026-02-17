@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,19 +76,30 @@ export default function CourseDetails() {
     }
 
     setEnrolling(true);
-    const { data, error } = await supabase.functions.invoke("bkash-checkout", {
-      body: {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/bkash-checkout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({
         action: "create",
         courseId: course.id,
-      },
+        userId: user.id,
+      }),
     });
 
-    if (error) {
-      toast({ title: "পেমেন্ট শুরু ব্যর্থ", description: error.message, variant: "destructive" });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const readable = typeof payload?.details === "string"
+        ? payload.details
+        : (payload?.error || payload?.message || "Payment create failed");
+      toast({ title: "পেমেন্ট শুরু ব্যর্থ", description: readable, variant: "destructive" });
       setEnrolling(false);
       return;
     }
 
+    const data = payload;
     if (data?.alreadyEnrolled) {
       setIsEnrolled(true);
       toast({ title: "আপনি ইতিমধ্যেই এনরোলড" });

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/integrations/supabase/client";
 import type { TablesInsert } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ export default function AdminPaymentGateway() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   const [enabled, setEnabled] = useState(false);
   const [baseUrl, setBaseUrl] = useState("https://tokenized.sandbox.bka.sh/v1.2.0-beta/tokenized/checkout");
@@ -101,6 +102,41 @@ export default function AdminPaymentGateway() {
     toast({ title: "bKash settings সেভ হয়েছে" });
   };
 
+  const testConnection = async () => {
+    setTesting(true);
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/bkash-checkout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({ action: "test" }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const details = typeof payload?.details === "string"
+        ? payload.details
+        : payload?.details
+          ? JSON.stringify(payload.details)
+          : (payload?.error || payload?.message || "Unknown error");
+      toast({
+        title: "Connection test failed",
+        description: details,
+        variant: "destructive",
+      });
+      setTesting(false);
+      return;
+    }
+
+    toast({
+      title: "bKash সংযোগ সফল",
+      description: payload?.message || "Grant token সফলভাবে পাওয়া গেছে।",
+    });
+    setTesting(false);
+  };
+
   return (
     <div className="space-y-5">
       <div>
@@ -184,9 +220,14 @@ export default function AdminPaymentGateway() {
                 </div>
               </div>
 
-              <Button onClick={() => void save()} disabled={saving}>
+              <div className="flex gap-2">
+                <Button onClick={() => void save()} disabled={saving}>
                 {saving ? "Saving..." : "Save Gateway Settings"}
-              </Button>
+                </Button>
+                <Button type="button" variant="outline" onClick={() => void testConnection()} disabled={testing}>
+                  {testing ? "Testing..." : "Test Grant Token"}
+                </Button>
+              </div>
             </>
           )}
         </CardContent>

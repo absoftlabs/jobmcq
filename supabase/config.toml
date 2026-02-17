@@ -1,1 +1,18 @@
 project_id = "rtwnprckxyfoolemsbbz"
+
+[auth]
+site_url = "http://localhost:8080"
+additional_redirect_urls = [
+  "http://localhost:8080/auth"
+]
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+
+[auth.email.template.confirmation]
+subject = "চাকরির প্রস্তুতি | ইমেইল ভেরিফিকেশন"
+content_path = "./supabase/templates/confirm-signup.html"
+
+[functions.bkash-checkout]
+verify_jwt = false
