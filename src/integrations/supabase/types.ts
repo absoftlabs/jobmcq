@@ -181,47 +181,6 @@ export type Database = {
         }
         Relationships: []
       }
-      course_lessons: {
-        Row: {
-          course_id: string
-          created_at: string
-          id: string
-          is_published: boolean
-          sort_order: number
-          summary: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          course_id: string
-          created_at?: string
-          id?: string
-          is_published?: boolean
-          sort_order?: number
-          summary?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          course_id?: string
-          created_at?: string
-          id?: string
-          is_published?: boolean
-          sort_order?: number
-          summary?: string | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "course_lessons_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       course_enrollments: {
         Row: {
           course_id: string
@@ -299,6 +258,47 @@ export type Database = {
           },
         ]
       }
+      course_lessons: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          is_published: boolean
+          sort_order: number
+          summary: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          sort_order?: number
+          summary?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          sort_order?: number
+          summary?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_lessons_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_payments: {
         Row: {
           amount: number
@@ -307,8 +307,8 @@ export type Database = {
           created_at: string
           currency: string
           id: string
-          metadata: Json
           merchant_invoice: string | null
+          metadata: Json
           paid_at: string | null
           payment_id: string | null
           payment_reference: string | null
@@ -325,8 +325,8 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
-          metadata?: Json
           merchant_invoice?: string | null
+          metadata?: Json
           paid_at?: string | null
           payment_id?: string | null
           payment_reference?: string | null
@@ -343,8 +343,8 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
-          metadata?: Json
           merchant_invoice?: string | null
+          metadata?: Json
           paid_at?: string | null
           payment_id?: string | null
           payment_reference?: string | null
@@ -522,83 +522,6 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
-        Row: {
-          account_status: string
-          avatar_url: string | null
-          coin_balance: number
-          created_at: string
-          full_name: string
-          id: string
-          last_login_at: string | null
-          suspended_at: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          account_status?: string
-          avatar_url?: string | null
-          coin_balance?: number
-          created_at?: string
-          full_name?: string
-          id?: string
-          last_login_at?: string | null
-          suspended_at?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          account_status?: string
-          avatar_url?: string | null
-          coin_balance?: number
-          created_at?: string
-          full_name?: string
-          id?: string
-          last_login_at?: string | null
-          suspended_at?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      question_options: {
-        Row: {
-          created_at: string
-          explanation: string | null
-          id: string
-          is_correct: boolean
-          option_text: string
-          question_id: string
-          sort_order: number
-        }
-        Insert: {
-          created_at?: string
-          explanation?: string | null
-          id?: string
-          is_correct?: boolean
-          option_text: string
-          question_id: string
-          sort_order?: number
-        }
-        Update: {
-          created_at?: string
-          explanation?: string | null
-          id?: string
-          is_correct?: boolean
-          option_text?: string
-          question_id?: string
-          sort_order?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "question_options_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "questions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       lesson_contents: {
         Row: {
           content_type: Database["public"]["Enums"]["lesson_content_type"]
@@ -675,6 +598,83 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      profiles: {
+        Row: {
+          account_status: string
+          avatar_url: string | null
+          coin_balance: number
+          created_at: string
+          full_name: string
+          id: string
+          last_login_at: string | null
+          suspended_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_status?: string
+          avatar_url?: string | null
+          coin_balance?: number
+          created_at?: string
+          full_name?: string
+          id?: string
+          last_login_at?: string | null
+          suspended_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_status?: string
+          avatar_url?: string | null
+          coin_balance?: number
+          created_at?: string
+          full_name?: string
+          id?: string
+          last_login_at?: string | null
+          suspended_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      question_options: {
+        Row: {
+          created_at: string
+          explanation: string | null
+          id: string
+          is_correct: boolean
+          option_text: string
+          question_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          is_correct?: boolean
+          option_text: string
+          question_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          is_correct?: boolean
+          option_text?: string
+          question_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       question_reports: {
         Row: {
@@ -786,23 +786,31 @@ export type Database = {
     }
     Functions: {
       get_course_enrollment_counts: {
-        Args: {
-          course_ids: string[]
-        }
+        Args: { course_ids: string[] }
         Returns: {
           course_id: string
           total: number
         }[]
       }
       get_public_global_leaderboard: {
-        Args: {
-          p_limit?: number
-        }
+        Args: { p_limit?: number }
         Returns: {
           full_name: string
           passed_exams: number
           points: number
           rank: number
+          user_id: string
+        }[]
+      }
+      get_public_leaderboard: {
+        Args: { p_exam_id: string; p_limit?: number }
+        Returns: {
+          coin_balance: number
+          exams_given: number
+          full_name: string
+          rank: number
+          score: number
+          time_taken_seconds: number
           user_id: string
         }[]
       }

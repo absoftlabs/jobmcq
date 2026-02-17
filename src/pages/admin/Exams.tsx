@@ -538,7 +538,7 @@ export default function AdminExams() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>স্ট্যাটাস</Label>
-                  <Select value={status} onValueChange={setStatus}>
+                  <Select value={status} onValueChange={(v) => setStatus(v as "draft" | "scheduled" | "live" | "ended")}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="draft">ড্রাফট</SelectItem>
