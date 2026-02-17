@@ -577,7 +577,7 @@ export default function AdminQuestions() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>ধরন</Label>
-                  <Select value={formType} onValueChange={setFormType}>
+                  <Select value={formType} onValueChange={(v) => setFormType(v as "mcq" | "fill_blank" | "multi_select")}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="mcq">MCQ (একটি সঠিক)</SelectItem>
@@ -588,7 +588,7 @@ export default function AdminQuestions() {
                 </div>
                 <div className="space-y-2">
                   <Label>কঠিনতা</Label>
-                  <Select value={formDifficulty} onValueChange={setFormDifficulty}>
+                  <Select value={formDifficulty} onValueChange={(v) => setFormDifficulty(v as "easy" | "medium" | "hard")}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="easy">সহজ</SelectItem>
