@@ -30,6 +30,7 @@ const mainMenuItems = [
   { title: "ড্যাশবোর্ড", url: "/admin", icon: LayoutDashboard },
   { title: "প্রশ্ন ব্যাংক", url: "/admin/questions", icon: BookOpen },
   { title: "পরীক্ষা", url: "/admin/exams", icon: FileText },
+  { title: "ফ্ল্যাশ কার্ড", url: "/admin/flash-cards", icon: GraduationCap },
   { title: "পরীক্ষার্থী", url: "/admin/users", icon: Users },
   { title: "রিপোর্ট", url: "/admin/reports", icon: Flag },
   { title: "পেমেন্ট গেটওয়ে", url: "/admin/payment-gateway", icon: WalletCards },

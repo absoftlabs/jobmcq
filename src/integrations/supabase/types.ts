@@ -522,6 +522,190 @@ export type Database = {
         }
         Relationships: []
       }
+      flash_card_answers: {
+        Row: {
+          card_id: string
+          coins_awarded: number
+          created_at: string
+          id: string
+          is_correct: boolean
+          session_id: string
+          user_answer: string | null
+        }
+        Insert: {
+          card_id: string
+          coins_awarded?: number
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          session_id: string
+          user_answer?: string | null
+        }
+        Update: {
+          card_id?: string
+          coins_awarded?: number
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          session_id?: string
+          user_answer?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flash_card_answers_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "flash_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flash_card_answers_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "flash_card_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flash_card_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      flash_card_sessions: {
+        Row: {
+          category_id: string | null
+          coins_earned: number
+          completed_at: string | null
+          correct_answers: number
+          created_at: string
+          id: string
+          total_cards: number
+          user_id: string
+          wrong_answers: number
+        }
+        Insert: {
+          category_id?: string | null
+          coins_earned?: number
+          completed_at?: string | null
+          correct_answers?: number
+          created_at?: string
+          id?: string
+          total_cards?: number
+          user_id: string
+          wrong_answers?: number
+        }
+        Update: {
+          category_id?: string | null
+          coins_earned?: number
+          completed_at?: string | null
+          correct_answers?: number
+          created_at?: string
+          id?: string
+          total_cards?: number
+          user_id?: string
+          wrong_answers?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flash_card_sessions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "flash_card_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flash_cards: {
+        Row: {
+          answer: string | null
+          card_type: Database["public"]["Enums"]["flash_card_type"]
+          category_id: string | null
+          coin_points: number
+          created_at: string
+          created_by: string | null
+          difficulty: string
+          explanation: string | null
+          id: string
+          image_url: string | null
+          is_enabled: boolean
+          options: Json | null
+          question: string
+          topic: string | null
+          updated_at: string
+        }
+        Insert: {
+          answer?: string | null
+          card_type?: Database["public"]["Enums"]["flash_card_type"]
+          category_id?: string | null
+          coin_points?: number
+          created_at?: string
+          created_by?: string | null
+          difficulty?: string
+          explanation?: string | null
+          id?: string
+          image_url?: string | null
+          is_enabled?: boolean
+          options?: Json | null
+          question: string
+          topic?: string | null
+          updated_at?: string
+        }
+        Update: {
+          answer?: string | null
+          card_type?: Database["public"]["Enums"]["flash_card_type"]
+          category_id?: string | null
+          coin_points?: number
+          created_at?: string
+          created_by?: string | null
+          difficulty?: string
+          explanation?: string | null
+          id?: string
+          image_url?: string | null
+          is_enabled?: boolean
+          options?: Json | null
+          question?: string
+          topic?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flash_cards_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "flash_card_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lesson_contents: {
         Row: {
           content_type: Database["public"]["Enums"]["lesson_content_type"]
@@ -827,6 +1011,7 @@ export type Database = {
       course_status: "draft" | "published"
       difficulty_level: "easy" | "medium" | "hard"
       exam_status: "draft" | "scheduled" | "live" | "ended"
+      flash_card_type: "flip" | "mcq" | "true_false" | "image"
       lesson_content_type: "text" | "image" | "video"
       question_type: "mcq" | "fill_blank" | "multi_select"
       report_status: "pending" | "reviewed" | "fixed" | "rejected"
@@ -961,6 +1146,7 @@ export const Constants = {
       course_status: ["draft", "published"],
       difficulty_level: ["easy", "medium", "hard"],
       exam_status: ["draft", "scheduled", "live", "ended"],
+      flash_card_type: ["flip", "mcq", "true_false", "image"],
       lesson_content_type: ["text", "image", "video"],
       question_type: ["mcq", "fill_blank", "multi_select"],
       report_status: ["pending", "reviewed", "fixed", "rejected"],
