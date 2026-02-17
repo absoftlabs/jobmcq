@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Clock3, FileText, Coins, ArrowRight, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { Trophy, Clock3, FileText, Coins, ArrowRight, ShieldCheck, Sparkles, Users, Layers } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -30,6 +30,11 @@ interface CourseEnrollmentCountRow {
   course_id: string;
   total: number;
 }
+interface FlashCardCategoryPreview {
+  id: string;
+  name: string;
+  description: string | null;
+}
 
 type PublicCourse = Pick<Tables<"courses">, "id" | "title" | "slug" | "summary" | "thumbnail_url" | "status" | "is_paid" | "price" | "currency">;
 type EnrolledCourse = Pick<Tables<"course_enrollments">, "course_id">;
@@ -41,12 +46,15 @@ export default function Index() {
   const [loadingExams, setLoadingExams] = useState(true);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
+  const [loadingFlashCards, setLoadingFlashCards] = useState(true);
   const [exams, setExams] = useState<PublicExam[]>([]);
   const [courses, setCourses] = useState<PublicCourse[]>([]);
   const [courseEnrollmentCounts, setCourseEnrollmentCounts] = useState<Record<string, number>>({});
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<string>>(new Set());
   const [enrollingCourseId, setEnrollingCourseId] = useState<string | null>(null);
   const [leaderboard, setLeaderboard] = useState<PublicLeaderboardRow[]>([]);
+  const [flashCategories, setFlashCategories] = useState<FlashCardCategoryPreview[]>([]);
+  const [totalFlashCards, setTotalFlashCards] = useState(0);
 
   const dashboardPath = useMemo(() => {
     if (!user) return "/auth";
@@ -135,7 +143,32 @@ export default function Index() {
     void fetchLeaderboard();
   }, []);
 
+  useEffect(() => {
+    const fetchFlashCardPreview = async () => {
+      setLoadingFlashCards(true);
+      try {
+        const [categoryRes, countRes] = await Promise.all([
+          supabase
+            .from("flash_card_categories")
+            .select("id, name, description")
+            .eq("is_active", true)
+            .order("sort_order")
+            .limit(6),
+          supabase.from("flash_cards").select("id", { count: "exact", head: true }).eq("is_enabled", true),
+        ]);
+
+        setFlashCategories((categoryRes.data || []) as FlashCardCategoryPreview[]);
+        setTotalFlashCards(countRes.count || 0);
+      } finally {
+        setLoadingFlashCards(false);
+      }
+    };
+
+    void fetchFlashCardPreview();
+  }, []);
+
   const liveExams = exams.filter((e) => e.status === "live");
+  const flashCardPlayPath = user && hasRole("student") ? "/student/flash-cards" : "/play/flash-cards";
 
   const enrollCourse = async (course: PublicCourse) => {
     const courseId = course.id;
@@ -358,6 +391,66 @@ export default function Index() {
                   </Card>
                 );
               })}
+            </div>
+          )}
+        </section>
+
+        <section id="flash-cards" className="space-y-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="space-y-2 text-left">
+              <h2 className="text-3xl font-black tracking-tight">ফ্ল্যাশ কার্ড</h2>
+              <p className="text-sm text-muted-foreground">ক্যাটাগরি ধরে প্র্যাকটিস করুন, দ্রুত রিভিশন দিন</p>
+            </div>
+            <div className="flex gap-2">
+              <Link to="/flash-cards">
+                <Button variant="outline">সব ফ্ল্যাশ কার্ড দেখুন</Button>
+              </Link>
+              <Link to={flashCardPlayPath}>
+                <Button className="gap-2">খেলা শুরু <ArrowRight className="h-4 w-4" /></Button>
+              </Link>
+            </div>
+          </div>
+
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="py-5">
+              <div className="flex flex-wrap items-center gap-4 text-sm">
+                <Badge variant="outline" className="gap-1 border-primary/30 bg-background/80 text-primary">
+                  <Layers className="h-3.5 w-3.5" /> মোট কার্ড: {totalFlashCards}
+                </Badge>
+                <p className="text-muted-foreground">দ্রুত প্র্যাকটিসের জন্য যেকোনো ক্যাটাগরি থেকে শুরু করতে পারেন।</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {loadingFlashCards ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : flashCategories.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                এখনো কোনো ফ্ল্যাশ কার্ড ক্যাটাগরি নেই।
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {flashCategories.map((category) => (
+                <Card key={category.id} className="transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-lg">{category.name}</CardTitle>
+                    <CardDescription className="line-clamp-2 min-h-10">
+                      {category.description || "এই ক্যাটাগরি থেকে প্রশ্ন অনুশীলন করে দক্ষতা বাড়ান।"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Link to={`${flashCardPlayPath}?category=${category.id}`}>
+                      <Button variant="secondary" className="w-full gap-2">
+                        এই ক্যাটাগরিতে খেলুন <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </section>
