@@ -3,10 +3,11 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Tables } from "@/integrations/supabase/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, CheckCircle2 } from "lucide-react";
+import { BookOpen, BookOpenCheck, CheckCircle2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 type Course = Pick<Tables<"courses">, "id" | "title" | "slug" | "summary" | "thumbnail_url">;
 type Enrollment = Pick<Tables<"course_enrollments">, "course_id" | "enrolled_at">;
@@ -114,9 +115,11 @@ export default function MyCourses() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">আমার কোর্স</h1>
-          <p className="text-sm text-muted-foreground">এনরোল করা কোর্স থেকে শেখা শুরু করুন এবং প্রগ্রেস ট্র্যাক করুন।</p>
+          <p className="text-sm text-muted-foreground">এনরোল করা কোর্স থেকে শেখা শুরু করুন</p>
         </div>
-        <Badge variant="secondary">মোট সম্পন্ন লেসন: {totalCompleted}</Badge>
+        <Badge variant="secondary" className="gap-1">
+          <CheckCircle2 className="h-3 w-3" /> মোট সম্পন্ন লেসন: {totalCompleted}
+        </Badge>
       </div>
 
       {loading ? (
@@ -126,54 +129,70 @@ export default function MyCourses() {
       ) : items.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
-            এখনো কোনো কোর্সে এনরোল করা হয়নি।
+            এখনো কোনো কোর্সে এনরোল করা হয়নি।
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {items.map((course) => {
             const percent = course.total_lessons > 0
               ? Math.round((course.completed_lessons / course.total_lessons) * 100)
               : 0;
+            const isComplete = percent === 100;
 
             return (
-              <Card key={course.id} className="flex flex-col overflow-hidden">
-                <div className="h-36 w-full border-b bg-muted/20">
+              <div
+                key={course.id}
+                className="group flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+              >
+                {/* Thumbnail */}
+                <Link to={`/student/courses/${course.id}/learn`} className="relative block h-40 overflow-hidden bg-muted">
                   {course.thumbnail_url ? (
-                    <img src={course.thumbnail_url} alt={course.title} className="h-full w-full object-cover" />
+                    <img src={course.thumbnail_url} alt={course.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
                   ) : (
-                    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No Thumbnail</div>
+                    <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10">
+                      <BookOpenCheck className="h-10 w-10 text-muted-foreground/30" />
+                    </div>
                   )}
+                  {/* Progress overlay */}
+                  {isComplete && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-accent/80">
+                      <div className="text-center text-accent-foreground">
+                        <CheckCircle2 className="mx-auto h-8 w-8" />
+                        <p className="mt-1 text-xs font-bold">সম্পন্ন</p>
+                      </div>
+                    </div>
+                  )}
+                </Link>
+
+                {/* Content */}
+                <div className="flex flex-1 flex-col p-4">
+                  <Link to={`/student/courses/${course.id}/learn`}>
+                    <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-card-foreground transition-colors group-hover:text-primary">
+                      {course.title}
+                    </h3>
+                  </Link>
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                    {course.summary || "এই কোর্সে ধাপে ধাপে কনটেন্ট রয়েছে।"}
+                  </p>
+
+                  {/* Progress */}
+                  <div className="mt-auto space-y-2 pt-4">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{course.completed_lessons}/{course.total_lessons} লেসন</span>
+                      <span className="font-medium text-foreground">{percent}%</span>
+                    </div>
+                    <Progress value={percent} className="h-1.5" />
+                  </div>
+
+                  <Link to={`/student/courses/${course.id}/learn`} className="mt-3 block">
+                    <Button size="sm" className="w-full gap-1.5 text-xs" variant={isComplete ? "secondary" : "default"}>
+                      <BookOpen className="h-3.5 w-3.5" />
+                      {isComplete ? "পুনরায় দেখুন" : "শেখা চালিয়ে যান"}
+                    </Button>
+                  </Link>
                 </div>
-                <CardHeader>
-                  <CardTitle className="line-clamp-2 text-lg">{course.title}</CardTitle>
-                  <CardDescription className="line-clamp-2">
-                    {course.summary || "এই কোর্সে ধাপে ধাপে কনটেন্ট রয়েছে।"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="mt-auto space-y-3">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{course.completed_lessons}/{course.total_lessons} লেসন সম্পন্ন</span>
-                    <span>{percent}%</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div className="h-full bg-primary transition-all" style={{ width: `${percent}%` }} />
-                  </div>
-                  <div className="flex gap-2">
-                    <Link to={`/student/courses/${course.id}/learn`} className="flex-1">
-                      <Button className="w-full">
-                        <BookOpen className="mr-2 h-4 w-4" />
-                        শেখা চালিয়ে যান
-                      </Button>
-                    </Link>
-                    {percent === 100 && (
-                      <Badge variant="outline" className="gap-1 self-center">
-                        <CheckCircle2 className="h-3 w-3" /> সম্পন্ন
-                      </Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              </div>
             );
           })}
         </div>

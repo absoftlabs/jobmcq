@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Clock3, FileText, Coins, ArrowRight, ShieldCheck, Sparkles, Users, Layers } from "lucide-react";
+import { Trophy, Clock3, FileText, Coins, ArrowRight, ShieldCheck, Sparkles, Users, Layers, BookOpenCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -339,10 +339,12 @@ export default function Index() {
           </div>
         </section>
 
-        <section id="courses" className="space-y-6">
-          <div className="space-y-2 text-left">
-            <h2 className="text-3xl font-black tracking-tight">কোর্স সমূহ</h2>
-            <p className="text-sm text-muted-foreground">কার্ডে ক্লিক করে বিস্তারিত দেখুন এবং এনরোল করুন</p>
+        <section id="courses" className="space-y-8">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="space-y-1">
+              <h2 className="text-3xl font-black tracking-tight">কোর্স সমূহ</h2>
+              <p className="text-sm text-muted-foreground">আমাদের জনপ্রিয় কোর্সগুলো ব্রাউজ করুন এবং আজই শুরু করুন</p>
+            </div>
           </div>
 
           {loadingCourses ? (
@@ -354,41 +356,82 @@ export default function Index() {
               <CardContent className="py-10 text-center text-muted-foreground">এখনো কোনো published course নেই।</CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {courses.map((course) => {
                 const enrolled = enrolledCourseIds.has(course.id);
                 const busy = enrollingCourseId === course.id;
+                const studentCount = courseEnrollmentCounts[course.id] || 0;
                 return (
-                  <Card key={course.id} className="flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-                    <div className="h-40 w-full overflow-hidden border-b bg-muted/20">
+                  <div
+                    key={course.id}
+                    className="group flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                  >
+                    {/* Thumbnail with overlay */}
+                    <Link to={`/courses/${course.slug}`} className="relative block h-44 overflow-hidden bg-muted">
                       {course.thumbnail_url ? (
-                        <img src={course.thumbnail_url} alt={course.title} className="h-full w-full object-cover" />
+                        <img
+                          src={course.thumbnail_url}
+                          alt={course.title}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
                       ) : (
-                        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No Thumbnail</div>
+                        <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10">
+                          <BookOpenCheck className="h-12 w-12 text-muted-foreground/30" />
+                        </div>
                       )}
-                    </div>
-                    <CardHeader>
-                      <CardTitle className="line-clamp-2 text-lg">{course.title}</CardTitle>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Users className="h-3.5 w-3.5" />
-                        <span>{courseEnrollmentCounts[course.id] || 0} জন এনরোল করেছে</span>
+                      {/* Price badge overlay */}
+                      <div className="absolute right-3 top-3">
+                        <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-bold shadow-lg ${
+                          course.is_paid
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-accent text-accent-foreground"
+                        }`}>
+                          {course.is_paid ? `৳${Number(course.price || 0).toFixed(0)}` : "ফ্রি"}
+                        </span>
                       </div>
-                      <CardDescription className="line-clamp-2 min-h-10">
-                        {course.summary || "এই কোর্সে ধাপে ধাপে প্রস্তুতির কনটেন্ট রয়েছে।"}
-                      </CardDescription>
-                      <Badge variant={course.is_paid ? "default" : "secondary"} className="w-fit">
-                        {course.is_paid ? `পেইড - ৳${Number(course.price || 0).toFixed(2)}` : "ফ্রি"}
-                      </Badge>
-                    </CardHeader>
-                    <CardContent className="mt-auto space-y-2">
-                      <Link to={`/courses/${course.slug}`} className="block">
-                        <Button variant="outline" className="w-full">বিস্তারিত দেখুন</Button>
+                    </Link>
+
+                    {/* Content */}
+                    <div className="flex flex-1 flex-col p-4">
+                      <Link to={`/courses/${course.slug}`}>
+                        <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-card-foreground transition-colors group-hover:text-primary">
+                          {course.title}
+                        </h3>
                       </Link>
-                      <Button className="w-full" onClick={() => void enrollCourse(course)} disabled={enrolled || busy}>
-                        {enrolled ? "ইতিমধ্যেই এনরোলড" : busy ? "Enrolling..." : course.is_paid ? "পেমেন্ট করে এনরোল" : "এনরোল করুন"}
-                      </Button>
-                    </CardContent>
-                  </Card>
+                      <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                        {course.summary || "এই কোর্সে ধাপে ধাপে প্রস্তুতির কনটেন্ট রয়েছে।"}
+                      </p>
+
+                      {/* Meta row */}
+                      <div className="mt-auto pt-3">
+                        <div className="flex items-center gap-3 border-t pt-3 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1">
+                            <Users className="h-3.5 w-3.5" /> {studentCount} জন
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* CTA */}
+                      <div className="mt-3">
+                        {enrolled ? (
+                          <Link to={hasRole("student") ? `/student/courses/${course.id}/learn` : `/courses/${course.slug}`} className="block">
+                            <Button size="sm" className="w-full gap-1.5 text-xs">
+                              <ArrowRight className="h-3.5 w-3.5" /> শেখা শুরু করুন
+                            </Button>
+                          </Link>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="w-full text-xs"
+                            onClick={() => void enrollCourse(course)}
+                            disabled={busy}
+                          >
+                            {busy ? "প্রসেস হচ্ছে..." : course.is_paid ? "এনরোল করুন" : "ফ্রি এনরোল"}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 );
               })}
             </div>
