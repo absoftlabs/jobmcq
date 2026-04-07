@@ -8,11 +8,32 @@ additional_redirect_urls = [
 
 [auth.email]
 enable_signup = true
-enable_confirmations = true
+enable_confirmations = false
 
 [auth.email.template.confirmation]
 subject = "চাকরির প্রস্তুতি | ইমেইল ভেরিফিকেশন"
 content_path = "./supabase/templates/confirm-signup.html"
 
-[functions.bkash-checkout]
+[functions.bkash-get-settings]
+verify_jwt = false
+
+[functions.bkash-save-settings]
+verify_jwt = false
+
+[functions.bkash-test-standard]
+verify_jwt = false
+
+[functions.bkash-test-tokenized]
+verify_jwt = false
+
+[functions.bkash-clear-token-cache]
+verify_jwt = false
+
+[functions.bkash-validate-config]
+verify_jwt = false
+
+[functions.bkash-subscription-initiate]
+verify_jwt = false
+
+[functions.bkash-subscription-complete]
 verify_jwt = false

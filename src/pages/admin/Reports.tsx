@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Eye } from "lucide-react";
 import type { Enums, Tables } from "@/integrations/supabase/types";
+import { withTimeout } from "@/lib/withTimeout";
 
 type ReportStatus = Enums<"report_status">;
 type QuestionReportRow = Tables<"question_reports">;
@@ -51,7 +52,50 @@ export default function AdminReports() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchReports(); }, []);
+  const loadReportsSafely = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await withTimeout(
+        supabase
+          .from("question_reports")
+          .select("*")
+          .order("created_at", { ascending: false }),
+        12000,
+        "রিপোর্ট লিস্ট লোড হতে টাইমআউট হয়েছে।",
+      );
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        setReports([]);
+        return;
+      }
+
+      const qIds = [...new Set(data.map((r) => r.question_id))];
+      const { data: qs, error: questionError } = await withTimeout(
+        supabase.from("questions").select("id, question_text").in("id", qIds),
+        12000,
+        "রিপোর্টের প্রশ্ন ডাটা লোড হতে টাইমআউট হয়েছে।",
+      );
+
+      if (questionError) throw questionError;
+
+      const typedQuestions = (qs || []) as QuestionTextRow[];
+      const qMap = new Map(typedQuestions.map((q) => [q.id, q.question_text]));
+      setReports((data as QuestionReportRow[]).map((r) => ({ ...r, question_text: qMap.get(r.question_id) || "—" })));
+    } catch (error) {
+      setReports([]);
+      toast({
+        title: "রিপোর্ট ডাটা লোড হয়নি",
+        description: error instanceof Error ? error.message : "ডাটাবেস কানেকশন বা query সমস্যা হয়েছে।",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void loadReportsSafely(); }, []);
 
   const handleUpdate = async () => {
     if (!selectedReport) return;

@@ -8,13 +8,14 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, FileText, PlayCircle } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
+import { useSubscriptionAccess } from "@/hooks/use-subscription-access";
 
 type Exam = Pick<
   Tables<"exams">,
   "id" | "title" | "description" | "total_questions" | "duration_minutes" | "pass_mark" | "max_attempts" | "reward_coins"
 >;
 type AttemptExamId = Pick<Tables<"attempts">, "exam_id">;
-type AccountStatus = "active" | "suspended" | "deleted";
+type AccountStatus = "pending" | "active" | "suspended" | "deleted";
 
 export default function LiveExams() {
   const [exams, setExams] = useState<Exam[]>([]);
@@ -22,6 +23,7 @@ export default function LiveExams() {
   const [attemptCounts, setAttemptCounts] = useState<Record<string, number>>({});
   const [accountStatus, setAccountStatus] = useState<AccountStatus>("active");
   const { user } = useAuth();
+  const { hasActiveSubscription, loading: subscriptionLoading } = useSubscriptionAccess(user?.id);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -32,15 +34,19 @@ export default function LiveExams() {
         setExams(data || []);
 
         if (user && data) {
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from("profiles")
             .select("account_status")
             .eq("user_id", user.id)
             .maybeSingle();
 
-          const status = profile?.account_status;
-          if (status === "suspended" || status === "deleted") setAccountStatus(status);
-          else setAccountStatus("active");
+          if (!profileError) {
+            const status = profile?.account_status;
+            if (status === "pending" || status === "suspended" || status === "deleted") setAccountStatus(status);
+            else setAccountStatus("active");
+          } else {
+            setAccountStatus("active");
+          }
 
           const { data: attempts } = await supabase
             .from("attempts")
@@ -67,6 +73,25 @@ export default function LiveExams() {
 
   const startExam = async (exam: Exam) => {
     if (!user) return;
+
+    if (!hasActiveSubscription) {
+      toast({
+        title: "সাবস্ক্রিপশন প্রয়োজন",
+        description: "পরীক্ষা দিতে হলে আগে একটি সক্রিয় সাবস্ক্রিপশন নিতে হবে।",
+        variant: "destructive",
+      });
+      navigate("/student/subscription");
+      return;
+    }
+
+    if (accountStatus === "pending") {
+      toast({
+        title: "একাউন্ট অনুমোদনের অপেক্ষায়",
+        description: "এডমিন অনুমোদনের আগে আপনি পরীক্ষা দিতে পারবেন না।",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (accountStatus === "suspended") {
       toast({
@@ -121,7 +146,7 @@ export default function LiveExams() {
     navigate(`/student/exam/${attempt.id}`);
   };
 
-  if (loading) {
+  if (loading || subscriptionLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -132,6 +157,14 @@ export default function LiveExams() {
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold">লাইভ পরীক্ষাসমূহ</h1>
+
+      {accountStatus === "pending" && (
+        <Card className="mb-4 border-amber-500/30 bg-amber-500/5">
+          <CardContent className="py-3 text-sm text-amber-700">
+            আপনার একাউন্ট এখনো এডমিন অনুমোদনের অপেক্ষায় আছে, তাই আপনি বর্তমানে কোনো পরীক্ষা দিতে পারবেন না।
+          </CardContent>
+        </Card>
+      )}
 
       {accountStatus === "suspended" && (
         <Card className="mb-4 border-destructive/30 bg-destructive/5">
@@ -149,6 +182,17 @@ export default function LiveExams() {
         </Card>
       )}
 
+      {!hasActiveSubscription && (
+        <Card className="mb-4 border-primary/30 bg-primary/5">
+          <CardContent className="py-3 text-sm text-foreground">
+            পরীক্ষা দিতে হলে আগে একটি সক্রিয় সাবস্ক্রিপশন নিতে হবে। সাবস্ক্রিপশন ছাড়া কোনো শিক্ষার্থী পরীক্ষা শুরু করতে পারবে না।
+            <Button className="ml-3" size="sm" variant="outline" onClick={() => navigate("/pricing")}>
+              প্যাকেজ দেখুন
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {exams.length === 0 ? (
         <div className="py-20 text-center text-muted-foreground">বর্তমানে কোনো লাইভ পরীক্ষা নেই</div>
       ) : (
@@ -157,6 +201,7 @@ export default function LiveExams() {
             const used = attemptCounts[e.id] || 0;
             const canAttempt = used < e.max_attempts;
             const accountBlocked = accountStatus !== "active";
+            const subscriptionBlocked = !hasActiveSubscription;
 
             return (
               <Card key={e.id} className="flex flex-col">
@@ -180,9 +225,9 @@ export default function LiveExams() {
                     {e.reward_coins > 0 && <Badge variant="secondary">🪙 {e.reward_coins} কয়েন</Badge>}
                   </div>
                   <p className="text-xs text-muted-foreground">Attempt: {used}/{e.max_attempts}</p>
-                  <Button className="w-full" disabled={!canAttempt || accountBlocked} onClick={() => void startExam(e)}>
+                  <Button className="w-full" disabled={!canAttempt || accountBlocked || subscriptionBlocked} onClick={() => void startExam(e)}>
                     <PlayCircle className="mr-2 h-4 w-4" />
-                    {accountBlocked ? "অ্যাকাউন্ট সীমাবদ্ধ" : canAttempt ? "পরীক্ষা শুরু করুন" : "Attempt শেষ"}
+                    {subscriptionBlocked ? "সাবস্ক্রিপশন প্রয়োজন" : accountBlocked ? "অ্যাকাউন্ট সীমাবদ্ধ" : canAttempt ? "পরীক্ষা শুরু করুন" : "Attempt শেষ"}
                   </Button>
                 </CardContent>
               </Card>

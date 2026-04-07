@@ -5,6 +5,23 @@ import type { Database } from './types';
 export const SUPABASE_URL = "https://rtwnprckxyfoolemsbbz.supabase.co";
 export const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0d25wcmNreHlmb29sZW1zYmJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExODYwNDIsImV4cCI6MjA4Njc2MjA0Mn0.pHhd9329B3Fu57Mc3psVYR0STY0RbI976BnZq7OS9v4";
 
+const currentProjectRef = new URL(SUPABASE_URL).hostname.split(".")[0];
+
+const clearStaleSupabaseAuthTokens = () => {
+  if (typeof window === "undefined") return;
+
+  const currentAuthKey = `sb-${currentProjectRef}-auth-token`;
+
+  for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+    const key = localStorage.key(index);
+    if (!key?.startsWith("sb-") || !key.endsWith("-auth-token")) continue;
+    if (key === currentAuthKey) continue;
+    localStorage.removeItem(key);
+  }
+};
+
+clearStaleSupabaseAuthTokens();
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 

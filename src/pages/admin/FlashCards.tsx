@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, Layers, FolderTree } from "lucide-react";
+import { withTimeout } from "@/lib/withTimeout";
 
 interface FlashCardCategory {
   id: string;
@@ -82,20 +83,40 @@ export default function AdminFlashCards() {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [catRes, cardRes] = await Promise.all([
-      supabase.from("flash_card_categories").select("*").order("sort_order"),
-      supabase.from("flash_cards").select("*").order("created_at", { ascending: false }),
-    ]);
-    if (catRes.data) setCategories(catRes.data as FlashCardCategory[]);
-    if (cardRes.data) {
+    try {
+      const [catRes, cardRes] = await Promise.all([
+        withTimeout(
+          supabase.from("flash_card_categories").select("*").order("sort_order"),
+          12000,
+          "ফ্ল্যাশ কার্ড ক্যাটাগরি লোড হতে টাইমআউট হয়েছে।",
+        ),
+        withTimeout(
+          supabase.from("flash_cards").select("*").order("created_at", { ascending: false }),
+          12000,
+          "ফ্ল্যাশ কার্ড লিস্ট লোড হতে টাইমআউট হয়েছে।",
+        ),
+      ]);
+      if (catRes.error) throw catRes.error;
+      if (cardRes.error) throw cardRes.error;
+
+      setCategories((catRes.data || []) as FlashCardCategory[]);
       setCards(
-        (cardRes.data as any[]).map((c) => ({
+        ((cardRes.data || []) as any[]).map((c) => ({
           ...c,
           options: Array.isArray(c.options) ? c.options : [],
-        }))
+        })),
       );
+    } catch (error) {
+      setCategories([]);
+      setCards([]);
+      toast({
+        title: "ফ্ল্যাশ কার্ড ডাটা লোড হয়নি",
+        description: error instanceof Error ? error.message : "ডাটাবেস কানেকশন বা query সমস্যা হয়েছে।",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // --- Category CRUD ---

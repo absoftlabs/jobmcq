@@ -1,73 +1,207 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { BookOpen } from "lucide-react";
+import { withTimeout } from "@/lib/withTimeout";
+import { resolveAccountStatus, type AccountStatus } from "@/lib/account-status";
+
+const getStatusMessage = (status: AccountStatus) => {
+  if (status === "pending") {
+    return "আপনার একাউন্ট এখনো এডমিন অনুমোদনের অপেক্ষায় আছে।";
+  }
+
+  if (status === "suspended") {
+    return "আপনার একাউন্ট সাময়িকভাবে বন্ধ করা হয়েছে।";
+  }
+
+  return "এই একাউন্ট দিয়ে বর্তমানে লগইন করা যাবে না।";
+};
+
+const getAccountStatus = async (userId: string): Promise<AccountStatus> => {
+  try {
+    const { data, error } = await withTimeout(
+      supabase
+        .from("profiles")
+        .select("account_status, suspended_at, last_login_at")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      8000,
+      "একাউন্ট স্ট্যাটাস লোড হতে টাইমআউট হয়েছে।",
+    );
+
+    if (error || !data) {
+      return "pending";
+    }
+
+    return resolveAccountStatus(data.account_status, data.suspended_at, data.last_login_at);
+  } catch {
+    return "pending";
+  }
+};
 
 export default function Auth() {
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = useMemo(() => {
+    const redirect = searchParams.get("redirect");
+    return redirect && redirect.startsWith("/") ? redirect : "/";
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    const form = new FormData(e.currentTarget);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: form.get("email") as string,
-      password: form.get("password") as string,
-    });
-    setLoading(false);
 
-    if (error) {
-      toast({ title: "লগইন ব্যর্থ", description: error.message, variant: "destructive" });
-      return;
+    try {
+      const form = new FormData(e.currentTarget);
+      const email = (form.get("email") as string).trim().toLowerCase();
+      const password = form.get("password") as string;
+
+      const { data, error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        12000,
+        "লগইন রিকোয়েস্ট টাইমআউট হয়েছে। আবার চেষ্টা করুন।",
+      );
+
+      if (error) {
+        toast({
+          title: "লগইন ব্যর্থ",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const userId = data.user?.id;
+      if (!userId) {
+        toast({
+          title: "লগইন ব্যর্থ",
+          description: "ইউজার তথ্য পাওয়া যায়নি।",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const roleResult = await withTimeout(
+        supabase.from("user_roles").select("role").eq("user_id", userId),
+        8000,
+        "ইউজার role লোড হতে টাইমআউট হয়েছে।",
+      ).catch(() => ({ data: [] as Array<{ role: string }> }));
+
+      const roles = (roleResult.data || []).map((row) => row.role);
+      if (!roles.includes("admin")) {
+        const status = await getAccountStatus(userId);
+
+        if (status !== "active") {
+          await withTimeout(
+            supabase.auth.signOut(),
+            8000,
+            "সেশন ক্লিয়ার করতে টাইমআউট হয়েছে।",
+          ).catch(() => undefined);
+
+          toast({
+            title: "লগইন অনুমোদিত নয়",
+            description: getStatusMessage(status),
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      await withTimeout(
+        supabase.from("profiles").update({ last_login_at: new Date().toISOString() }).eq("user_id", userId),
+        8000,
+        "লাস্ট লগইন আপডেট হতে টাইমআউট হয়েছে।",
+      ).catch(() => undefined);
+
+      navigate(redirectTo);
+    } catch (error) {
+      toast({
+        title: "লগইন ব্যর্থ",
+        description: error instanceof Error ? error.message : "অজানা সমস্যা হয়েছে।",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-
-    if (data.user) {
-      await supabase
-        .from("profiles")
-        .update({ last_login_at: new Date().toISOString() })
-        .eq("user_id", data.user.id);
-    }
-
-    navigate("/");
   };
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
-    const form = new FormData(e.currentTarget);
-    const email = form.get("email") as string;
-    const password = form.get("password") as string;
-    const name = form.get("name") as string;
+    try {
+      const form = new FormData(e.currentTarget);
+      const email = (form.get("email") as string).trim().toLowerCase();
+      const password = form.get("password") as string;
+      const name = form.get("name") as string;
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: name },
-        emailRedirectTo: `${window.location.origin}/auth`,
-      },
-    });
+      const { data, error } = await withTimeout(
+        supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: name },
+          },
+        }),
+        12000,
+        "রেজিস্ট্রেশন রিকোয়েস্ট টাইমআউট হয়েছে। আবার চেষ্টা করুন।",
+      );
 
-    setLoading(false);
+      if (error) {
+        toast({
+          title: "রেজিস্ট্রেশন ব্যর্থ",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (error) {
-      toast({ title: "রেজিস্ট্রেশন ব্যর্থ", description: error.message, variant: "destructive" });
-      return;
+      if (data.user?.id) {
+        await withTimeout(
+          supabase
+            .from("profiles")
+            .update({ account_status: "pending", last_login_at: null, suspended_at: null })
+            .eq("user_id", data.user.id),
+          8000,
+          "প্রোফাইল approval স্ট্যাটাস আপডেট হতে টাইমআউট হয়েছে।",
+        ).catch(async () => {
+          await withTimeout(
+            supabase
+              .from("profiles")
+              .update({ account_status: "active", last_login_at: null, suspended_at: null })
+              .eq("user_id", data.user.id),
+            8000,
+            "প্রোফাইল fallback approval স্ট্যাটাস আপডেট হতে টাইমআউট হয়েছে।",
+          ).catch(() => undefined);
+        });
+      }
+
+      await withTimeout(
+        supabase.auth.signOut(),
+        8000,
+        "সেশন ক্লিয়ার করতে টাইমআউট হয়েছে।",
+      ).catch(() => undefined);
+
+      toast({
+        title: "রেজিস্ট্রেশন সফল",
+        description: "আপনার একাউন্ট তৈরি হয়েছে। এডমিন অনুমোদনের পর লগইন করতে পারবেন।",
+      });
+    } catch (error) {
+      toast({
+        title: "রেজিস্ট্রেশন ব্যর্থ",
+        description: error instanceof Error ? error.message : "অজানা সমস্যা হয়েছে।",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-
-    toast({
-      title: "রেজিস্ট্রেশন সফল",
-      description: "ভেরিফিকেশন লিংক আপনার ইমেইলে পাঠানো হয়েছে। ইমেইল ভেরিফাই করে লগইন করুন।",
-    });
   };
 
   return (
@@ -78,7 +212,7 @@ export default function Auth() {
             <BookOpen className="h-7 w-7" />
           </div>
           <CardTitle className="text-2xl">চাকরির পরীক্ষা প্ল্যাটফর্ম</CardTitle>
-          <CardDescription>MCQ পরীক্ষার প্রস্তুতি নিন</CardDescription>
+          <CardDescription>রেজিস্ট্রেশনের পর এডমিন অনুমোদন লাগবে</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login">
@@ -124,6 +258,9 @@ export default function Auth() {
                     minLength={6}
                   />
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  রেজিস্ট্রেশন শেষ হলে এডমিন অনুমোদনের আগে লগইন করা যাবে না।
+                </p>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "তৈরি হচ্ছে..." : "একাউন্ট তৈরি করুন"}
                 </Button>

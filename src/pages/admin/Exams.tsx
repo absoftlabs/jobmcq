@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Download, Plus, Edit, Trash2, Eye, Upload } from "lucide-react";
 import type { Enums, Tables, TablesInsert } from "@/integrations/supabase/types";
+import { withTimeout } from "@/lib/withTimeout";
 
 type Exam = Tables<"exams">;
 type ExamStatus = Enums<"exam_status">;
@@ -208,12 +209,28 @@ export default function AdminExams() {
   const [negativeValue, setNegativeValue] = useState(0.25);
 
   const fetchExams = async () => {
-    const { data } = await supabase.from("exams").select("*").order("created_at", { ascending: false });
-    if (data) setExams(data);
-    setLoading(false);
+    setLoading(true);
+    try {
+      const { data, error } = await withTimeout(
+        supabase.from("exams").select("*").order("created_at", { ascending: false }),
+        12000,
+        "এক্সাম লিস্ট লোড হতে টাইমআউট হয়েছে।",
+      );
+      if (error) throw error;
+      setExams(data || []);
+    } catch (error) {
+      setExams([]);
+      toast({
+        title: "এক্সাম ডাটা লোড হয়নি",
+        description: error instanceof Error ? error.message : "ডাটাবেস কানেকশন বা query সমস্যা হয়েছে।",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchExams(); }, []);
+  useEffect(() => { void fetchExams(); }, []);
 
   const resetForm = () => {
     setTitle(""); setDescription(""); setStatus("draft"); setTotalQuestions(25);
@@ -257,25 +274,43 @@ export default function AdminExams() {
       if (error) { toast({ title: "তৈরি ব্যর্থ", description: error.message, variant: "destructive" }); return; }
       toast({ title: "এক্সাম তৈরি হয়েছে" });
     }
-    setDialogOpen(false); resetForm(); fetchExams();
+    setDialogOpen(false); resetForm(); void fetchExams();
   };
 
   const handleDelete = async (id: string) => {
     await supabase.from("exams").delete().eq("id", id);
-    toast({ title: "এক্সাম ডিলিট হয়েছে" }); fetchExams();
+    toast({ title: "এক্সাম ডিলিট হয়েছে" }); void fetchExams();
   };
 
   const openAssign = async (examId: string) => {
     setAssignExamId(examId);
-    const [{ data: qs }, { data: assigned }] = await Promise.all([
-      supabase.from("questions").select("id, question_text, category, difficulty"),
-      supabase.from("exam_questions").select("question_id").eq("exam_id", examId),
-    ]);
-    setAllQuestions(qs || []);
-    const typedAssigned = (assigned || []) as AssignedQuestion[];
-    setAssignedIds(new Set(typedAssigned.map((a) => a.question_id)));
-    resetNewQuestionForm();
-    setAssignDialogOpen(true);
+    try {
+      const [{ data: qs, error: qsError }, { data: assigned, error: assignedError }] = await Promise.all([
+        withTimeout(
+          supabase.from("questions").select("id, question_text, category, difficulty"),
+          12000,
+          "প্রশ্ন লিস্ট লোড হতে টাইমআউট হয়েছে।",
+        ),
+        withTimeout(
+          supabase.from("exam_questions").select("question_id").eq("exam_id", examId),
+          12000,
+          "Assigned question লোড হতে টাইমআউট হয়েছে।",
+        ),
+      ]);
+      if (qsError) throw qsError;
+      if (assignedError) throw assignedError;
+      setAllQuestions(qs || []);
+      const typedAssigned = (assigned || []) as AssignedQuestion[];
+      setAssignedIds(new Set(typedAssigned.map((a) => a.question_id)));
+      resetNewQuestionForm();
+      setAssignDialogOpen(true);
+    } catch (error) {
+      toast({
+        title: "এক্সাম প্রশ্ন লোড হয়নি",
+        description: error instanceof Error ? error.message : "ডাটাবেস কানেকশন বা query সমস্যা হয়েছে।",
+        variant: "destructive",
+      });
+    }
   };
 
   const buildQuestionMap = () => {

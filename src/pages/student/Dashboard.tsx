@@ -46,7 +46,7 @@ export default function StudentDashboard() {
       <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background">
         <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/15 blur-2xl" />
         <CardContent className="relative p-6">
-          <p className="text-xs font-medium uppercase tracking-wide text-primary/80">Student Hub</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-primary/80">শিক্ষার্থী ড্যাশবোর্ড</p>
           <h1 className="mt-2 text-2xl font-black tracking-tight md:text-3xl">
             স্বাগতম, {profile?.full_name || "শিক্ষার্থী"}!
           </h1>

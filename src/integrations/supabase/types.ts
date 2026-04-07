@@ -148,281 +148,6 @@ export type Database = {
         }
         Relationships: []
       }
-      course_categories: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          is_active: boolean
-          name: string
-          slug: string
-          sort_order: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name: string
-          slug: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          slug?: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      course_enrollments: {
-        Row: {
-          course_id: string
-          enrolled_at: string
-          id: string
-          user_id: string
-        }
-        Insert: {
-          course_id: string
-          enrolled_at?: string
-          id?: string
-          user_id: string
-        }
-        Update: {
-          course_id?: string
-          enrolled_at?: string
-          id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "course_enrollments_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      course_lesson_progress: {
-        Row: {
-          completed_at: string | null
-          course_id: string
-          created_at: string
-          id: string
-          is_completed: boolean
-          lesson_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          completed_at?: string | null
-          course_id: string
-          created_at?: string
-          id?: string
-          is_completed?: boolean
-          lesson_id: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          completed_at?: string | null
-          course_id?: string
-          created_at?: string
-          id?: string
-          is_completed?: boolean
-          lesson_id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "course_lesson_progress_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "course_lesson_progress_lesson_id_fkey"
-            columns: ["lesson_id"]
-            isOneToOne: false
-            referencedRelation: "course_lessons"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      course_lessons: {
-        Row: {
-          course_id: string
-          created_at: string
-          id: string
-          is_published: boolean
-          sort_order: number
-          summary: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          course_id: string
-          created_at?: string
-          id?: string
-          is_published?: boolean
-          sort_order?: number
-          summary?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          course_id?: string
-          created_at?: string
-          id?: string
-          is_published?: boolean
-          sort_order?: number
-          summary?: string | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "course_lessons_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      course_payments: {
-        Row: {
-          amount: number
-          bkash_payment_status: string | null
-          course_id: string
-          created_at: string
-          currency: string
-          id: string
-          merchant_invoice: string | null
-          metadata: Json
-          paid_at: string | null
-          payment_id: string | null
-          payment_reference: string | null
-          provider: string
-          status: string
-          trx_id: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          bkash_payment_status?: string | null
-          course_id: string
-          created_at?: string
-          currency?: string
-          id?: string
-          merchant_invoice?: string | null
-          metadata?: Json
-          paid_at?: string | null
-          payment_id?: string | null
-          payment_reference?: string | null
-          provider?: string
-          status?: string
-          trx_id?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          bkash_payment_status?: string | null
-          course_id?: string
-          created_at?: string
-          currency?: string
-          id?: string
-          merchant_invoice?: string | null
-          metadata?: Json
-          paid_at?: string | null
-          payment_id?: string | null
-          payment_reference?: string | null
-          provider?: string
-          status?: string
-          trx_id?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "course_payments_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      courses: {
-        Row: {
-          category_id: string | null
-          created_at: string
-          created_by: string | null
-          currency: string
-          description: string | null
-          id: string
-          is_paid: boolean
-          price: number
-          slug: string
-          status: Database["public"]["Enums"]["course_status"]
-          summary: string | null
-          thumbnail_url: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          category_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          currency?: string
-          description?: string | null
-          id?: string
-          is_paid?: boolean
-          price?: number
-          slug: string
-          status?: Database["public"]["Enums"]["course_status"]
-          summary?: string | null
-          thumbnail_url?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          category_id?: string | null
-          created_at?: string
-          created_by?: string | null
-          currency?: string
-          description?: string | null
-          id?: string
-          is_paid?: boolean
-          price?: number
-          slug?: string
-          status?: Database["public"]["Enums"]["course_status"]
-          summary?: string | null
-          thumbnail_url?: string | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "courses_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "course_categories"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       exam_questions: {
         Row: {
           created_at: string
@@ -706,82 +431,633 @@ export type Database = {
           },
         ]
       }
-      lesson_contents: {
-        Row: {
-          content_type: Database["public"]["Enums"]["lesson_content_type"]
-          created_at: string
-          id: string
-          lesson_id: string
-          media_url: string | null
-          sort_order: number
-          text_content: string | null
-          title: string | null
-          updated_at: string
-        }
-        Insert: {
-          content_type: Database["public"]["Enums"]["lesson_content_type"]
-          created_at?: string
-          id?: string
-          lesson_id: string
-          media_url?: string | null
-          sort_order?: number
-          text_content?: string | null
-          title?: string | null
-          updated_at?: string
-        }
-        Update: {
-          content_type?: Database["public"]["Enums"]["lesson_content_type"]
-          created_at?: string
-          id?: string
-          lesson_id?: string
-          media_url?: string | null
-          sort_order?: number
-          text_content?: string | null
-          title?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lesson_contents_lesson_id_fkey"
-            columns: ["lesson_id"]
-            isOneToOne: false
-            referencedRelation: "course_lessons"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       payment_gateway_settings: {
         Row: {
+          callback_base_url: string | null
           config: Json
           created_at: string
+          currency: string
           display_name: string
+          enable_logging: boolean
+          enable_tokenized: boolean
+          failure_url: string | null
           id: string
           is_enabled: boolean
+          is_sandbox: boolean
+          last_standard_connection_status: Database["public"]["Enums"]["payment_connection_status"]
+          last_standard_test_message: string | null
+          last_standard_tested_at: string | null
+          last_tokenized_connection_status: Database["public"]["Enums"]["payment_connection_status"]
+          last_tokenized_test_message: string | null
+          last_tokenized_tested_at: string | null
+          payment_description: string | null
+          payment_title: string
           provider: string
+          provider_name: string
+          redirect_cancel_url: string | null
+          redirect_failure_url: string | null
+          redirect_success_url: string | null
+          show_on_checkout: boolean
+          standard_app_key_encrypted: string | null
+          standard_app_secret_encrypted: string | null
+          standard_base_url: string | null
+          standard_create_payment_endpoint: string
+          standard_execute_payment_endpoint: string
+          standard_grant_token_endpoint: string
+          standard_password_encrypted: string | null
+          standard_query_payment_endpoint: string
+          standard_refresh_token_endpoint: string
+          standard_refund_endpoint: string
+          standard_search_transaction_endpoint: string
+          standard_username_encrypted: string | null
+          success_url: string | null
+          tokenized_agreement_status_endpoint: string
+          tokenized_app_key_encrypted: string | null
+          tokenized_app_secret_encrypted: string | null
+          tokenized_base_url: string | null
+          tokenized_cancel_agreement_endpoint: string
+          tokenized_confirm_endpoint: string
+          tokenized_create_endpoint: string
+          tokenized_execute_endpoint: string
+          tokenized_grant_token_endpoint: string
+          tokenized_password_encrypted: string | null
+          tokenized_payment_status_endpoint: string
+          tokenized_refresh_token_endpoint: string
+          tokenized_refund_endpoint: string
+          tokenized_search_transaction_endpoint: string
+          tokenized_username_encrypted: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
+          callback_base_url?: string | null
           config?: Json
           created_at?: string
+          currency?: string
           display_name: string
+          enable_logging?: boolean
+          enable_tokenized?: boolean
+          failure_url?: string | null
           id?: string
           is_enabled?: boolean
+          is_sandbox?: boolean
+          last_standard_connection_status?: Database["public"]["Enums"]["payment_connection_status"]
+          last_standard_test_message?: string | null
+          last_standard_tested_at?: string | null
+          last_tokenized_connection_status?: Database["public"]["Enums"]["payment_connection_status"]
+          last_tokenized_test_message?: string | null
+          last_tokenized_tested_at?: string | null
+          payment_description?: string | null
+          payment_title?: string
           provider: string
+          provider_name?: string
+          redirect_cancel_url?: string | null
+          redirect_failure_url?: string | null
+          redirect_success_url?: string | null
+          show_on_checkout?: boolean
+          standard_app_key_encrypted?: string | null
+          standard_app_secret_encrypted?: string | null
+          standard_base_url?: string | null
+          standard_create_payment_endpoint?: string
+          standard_execute_payment_endpoint?: string
+          standard_grant_token_endpoint?: string
+          standard_password_encrypted?: string | null
+          standard_query_payment_endpoint?: string
+          standard_refresh_token_endpoint?: string
+          standard_refund_endpoint?: string
+          standard_search_transaction_endpoint?: string
+          standard_username_encrypted?: string | null
+          success_url?: string | null
+          tokenized_agreement_status_endpoint?: string
+          tokenized_app_key_encrypted?: string | null
+          tokenized_app_secret_encrypted?: string | null
+          tokenized_base_url?: string | null
+          tokenized_cancel_agreement_endpoint?: string
+          tokenized_confirm_endpoint?: string
+          tokenized_create_endpoint?: string
+          tokenized_execute_endpoint?: string
+          tokenized_grant_token_endpoint?: string
+          tokenized_password_encrypted?: string | null
+          tokenized_payment_status_endpoint?: string
+          tokenized_refresh_token_endpoint?: string
+          tokenized_refund_endpoint?: string
+          tokenized_search_transaction_endpoint?: string
+          tokenized_username_encrypted?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
+          callback_base_url?: string | null
           config?: Json
           created_at?: string
+          currency?: string
           display_name?: string
+          enable_logging?: boolean
+          enable_tokenized?: boolean
+          failure_url?: string | null
           id?: string
           is_enabled?: boolean
+          is_sandbox?: boolean
+          last_standard_connection_status?: Database["public"]["Enums"]["payment_connection_status"]
+          last_standard_test_message?: string | null
+          last_standard_tested_at?: string | null
+          last_tokenized_connection_status?: Database["public"]["Enums"]["payment_connection_status"]
+          last_tokenized_test_message?: string | null
+          last_tokenized_tested_at?: string | null
+          payment_description?: string | null
+          payment_title?: string
           provider?: string
+          provider_name?: string
+          redirect_cancel_url?: string | null
+          redirect_failure_url?: string | null
+          redirect_success_url?: string | null
+          show_on_checkout?: boolean
+          standard_app_key_encrypted?: string | null
+          standard_app_secret_encrypted?: string | null
+          standard_base_url?: string | null
+          standard_create_payment_endpoint?: string
+          standard_execute_payment_endpoint?: string
+          standard_grant_token_endpoint?: string
+          standard_password_encrypted?: string | null
+          standard_query_payment_endpoint?: string
+          standard_refresh_token_endpoint?: string
+          standard_refund_endpoint?: string
+          standard_search_transaction_endpoint?: string
+          standard_username_encrypted?: string | null
+          success_url?: string | null
+          tokenized_agreement_status_endpoint?: string
+          tokenized_app_key_encrypted?: string | null
+          tokenized_app_secret_encrypted?: string | null
+          tokenized_base_url?: string | null
+          tokenized_cancel_agreement_endpoint?: string
+          tokenized_confirm_endpoint?: string
+          tokenized_create_endpoint?: string
+          tokenized_execute_endpoint?: string
+          tokenized_grant_token_endpoint?: string
+          tokenized_password_encrypted?: string | null
+          tokenized_payment_status_endpoint?: string
+          tokenized_refresh_token_endpoint?: string
+          tokenized_refund_endpoint?: string
+          tokenized_search_transaction_endpoint?: string
+          tokenized_username_encrypted?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Relationships: []
+      }
+      payment_gateway_logs: {
+        Row: {
+          created_at: string
+          endpoint_name: string | null
+          http_status: number | null
+          id: string
+          log_type: string
+          message: string | null
+          provider_name: string
+          request_payload: Json
+          response_payload: Json
+          status: Database["public"]["Enums"]["payment_log_status"]
+        }
+        Insert: {
+          created_at?: string
+          endpoint_name?: string | null
+          http_status?: number | null
+          id?: string
+          log_type: string
+          message?: string | null
+          provider_name?: string
+          request_payload?: Json
+          response_payload?: Json
+          status?: Database["public"]["Enums"]["payment_log_status"]
+        }
+        Update: {
+          created_at?: string
+          endpoint_name?: string | null
+          http_status?: number | null
+          id?: string
+          log_type?: string
+          message?: string | null
+          provider_name?: string
+          request_payload?: Json
+          response_payload?: Json
+          status?: Database["public"]["Enums"]["payment_log_status"]
+        }
+        Relationships: []
+      }
+      payment_gateway_tokens: {
+        Row: {
+          access_token_encrypted: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          last_refreshed_at: string | null
+          metadata: Json
+          provider_name: string
+          refresh_token_encrypted: string | null
+          token_masked: string | null
+          token_type: string
+          updated_at: string
+        }
+        Insert: {
+          access_token_encrypted?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          last_refreshed_at?: string | null
+          metadata?: Json
+          provider_name?: string
+          refresh_token_encrypted?: string | null
+          token_masked?: string | null
+          token_type: string
+          updated_at?: string
+        }
+        Update: {
+          access_token_encrypted?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          last_refreshed_at?: string | null
+          metadata?: Json
+          provider_name?: string
+          refresh_token_encrypted?: string | null
+          token_masked?: string | null
+          token_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          created_at: string
+          favicon_url: string | null
+          id: number
+          logo_url: string | null
+          site_subtitle: string
+          site_title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          favicon_url?: string | null
+          id?: number
+          logo_url?: string | null
+          site_subtitle?: string
+          site_title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          favicon_url?: string | null
+          id?: number
+          logo_url?: string | null
+          site_subtitle?: string
+          site_title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      subscription_orders: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          metadata: Json
+          order_notes: string | null
+          package_id: string
+          payment_method: string
+          payment_status: Database["public"]["Enums"]["subscription_payment_status"]
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json
+          order_notes?: string | null
+          package_id: string
+          payment_method?: string
+          payment_status?: Database["public"]["Enums"]["subscription_payment_status"]
+          transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          metadata?: Json
+          order_notes?: string | null
+          package_id?: string
+          payment_method?: string
+          payment_status?: Database["public"]["Enums"]["subscription_payment_status"]
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_orders_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_package_features: {
+        Row: {
+          created_at: string
+          feature_key: string
+          feature_label: string
+          feature_type: Database["public"]["Enums"]["package_feature_type"]
+          feature_value: string | null
+          icon_type: Database["public"]["Enums"]["package_feature_icon_type"]
+          id: string
+          is_active: boolean
+          is_highlighted: boolean
+          package_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          feature_key: string
+          feature_label: string
+          feature_type?: Database["public"]["Enums"]["package_feature_type"]
+          feature_value?: string | null
+          icon_type?: Database["public"]["Enums"]["package_feature_icon_type"]
+          id?: string
+          is_active?: boolean
+          is_highlighted?: boolean
+          package_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          feature_key?: string
+          feature_label?: string
+          feature_type?: Database["public"]["Enums"]["package_feature_type"]
+          feature_value?: string | null
+          icon_type?: Database["public"]["Enums"]["package_feature_icon_type"]
+          id?: string
+          is_active?: boolean
+          is_highlighted?: boolean
+          package_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_package_features_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_packages: {
+        Row: {
+          accent_color: string | null
+          active: boolean
+          allow_downgrade: boolean
+          allow_upgrade: boolean
+          available_for_guests: boolean
+          available_for_logged_in: boolean
+          badge_color: string | null
+          badge_text: string | null
+          billing_type: Database["public"]["Enums"]["subscription_billing_type"]
+          button_text: string
+          button_url: string | null
+          created_at: string
+          currency: string
+          duration_type: Database["public"]["Enums"]["subscription_duration_type"]
+          duration_value: number | null
+          full_description: string | null
+          id: string
+          is_highlighted: boolean
+          is_lifetime: boolean
+          is_popular: boolean
+          limit_purchase_per_user: number | null
+          metadata: Json
+          name: string
+          regular_price: number
+          renewal_allowed: boolean
+          sale_price: number | null
+          short_description: string | null
+          show_on_homepage: boolean
+          show_on_pricing_page: boolean
+          slug: string
+          sort_order: number
+          trial_days: number | null
+          trial_enabled: boolean
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          accent_color?: string | null
+          active?: boolean
+          allow_downgrade?: boolean
+          allow_upgrade?: boolean
+          available_for_guests?: boolean
+          available_for_logged_in?: boolean
+          badge_color?: string | null
+          badge_text?: string | null
+          billing_type?: Database["public"]["Enums"]["subscription_billing_type"]
+          button_text?: string
+          button_url?: string | null
+          created_at?: string
+          currency?: string
+          duration_type?: Database["public"]["Enums"]["subscription_duration_type"]
+          duration_value?: number | null
+          full_description?: string | null
+          id?: string
+          is_highlighted?: boolean
+          is_lifetime?: boolean
+          is_popular?: boolean
+          limit_purchase_per_user?: number | null
+          metadata?: Json
+          name: string
+          regular_price?: number
+          renewal_allowed?: boolean
+          sale_price?: number | null
+          short_description?: string | null
+          show_on_homepage?: boolean
+          show_on_pricing_page?: boolean
+          slug: string
+          sort_order?: number
+          trial_days?: number | null
+          trial_enabled?: boolean
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          accent_color?: string | null
+          active?: boolean
+          allow_downgrade?: boolean
+          allow_upgrade?: boolean
+          available_for_guests?: boolean
+          available_for_logged_in?: boolean
+          badge_color?: string | null
+          badge_text?: string | null
+          billing_type?: Database["public"]["Enums"]["subscription_billing_type"]
+          button_text?: string
+          button_url?: string | null
+          created_at?: string
+          currency?: string
+          duration_type?: Database["public"]["Enums"]["subscription_duration_type"]
+          duration_value?: number | null
+          full_description?: string | null
+          id?: string
+          is_highlighted?: boolean
+          is_lifetime?: boolean
+          is_popular?: boolean
+          limit_purchase_per_user?: number | null
+          metadata?: Json
+          name?: string
+          regular_price?: number
+          renewal_allowed?: boolean
+          sale_price?: number | null
+          short_description?: string | null
+          show_on_homepage?: boolean
+          show_on_pricing_page?: boolean
+          slug?: string
+          sort_order?: number
+          trial_days?: number | null
+          trial_enabled?: boolean
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: []
+      }
+      subscription_settings: {
+        Row: {
+          created_at: string
+          currency_symbol: string
+          id: number
+          pricing_enabled: boolean
+          pricing_page_subtitle: string
+          pricing_page_title: string
+          show_comparison_table: boolean
+          show_discount_badge: boolean
+          show_faq: boolean
+          show_popular_ribbon: boolean
+          show_support_block: boolean
+          show_testimonials: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency_symbol?: string
+          id?: number
+          pricing_enabled?: boolean
+          pricing_page_subtitle?: string
+          pricing_page_title?: string
+          show_comparison_table?: boolean
+          show_discount_badge?: boolean
+          show_faq?: boolean
+          show_popular_ribbon?: boolean
+          show_support_block?: boolean
+          show_testimonials?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency_symbol?: string
+          id?: number
+          pricing_enabled?: boolean
+          pricing_page_subtitle?: string
+          pricing_page_title?: string
+          show_comparison_table?: boolean
+          show_discount_badge?: boolean
+          show_faq?: boolean
+          show_popular_ribbon?: boolean
+          show_support_block?: boolean
+          show_testimonials?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          currency: string
+          end_date: string | null
+          id: string
+          is_lifetime: boolean
+          metadata: Json
+          order_id: string | null
+          package_id: string | null
+          package_name: string
+          payment_status: Database["public"]["Enums"]["subscription_payment_status"]
+          renewal_date: string | null
+          start_date: string
+          subscription_status: Database["public"]["Enums"]["subscription_status"]
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid?: number
+          created_at?: string
+          currency?: string
+          end_date?: string | null
+          id?: string
+          is_lifetime?: boolean
+          metadata?: Json
+          order_id?: string | null
+          package_id?: string | null
+          package_name: string
+          payment_status?: Database["public"]["Enums"]["subscription_payment_status"]
+          renewal_date?: string | null
+          start_date?: string
+          subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          currency?: string
+          end_date?: string | null
+          id?: string
+          is_lifetime?: boolean
+          metadata?: Json
+          order_id?: string | null
+          package_id?: string | null
+          package_name?: string
+          payment_status?: Database["public"]["Enums"]["subscription_payment_status"]
+          renewal_date?: string | null
+          start_date?: string
+          subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_subscriptions_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_packages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -789,6 +1065,8 @@ export type Database = {
           avatar_url: string | null
           coin_balance: number
           created_at: string
+          current_package_id: string | null
+          current_subscription_id: string | null
           full_name: string
           id: string
           last_login_at: string | null
@@ -801,6 +1079,8 @@ export type Database = {
           avatar_url?: string | null
           coin_balance?: number
           created_at?: string
+          current_package_id?: string | null
+          current_subscription_id?: string | null
           full_name?: string
           id?: string
           last_login_at?: string | null
@@ -813,6 +1093,8 @@ export type Database = {
           avatar_url?: string | null
           coin_balance?: number
           created_at?: string
+          current_package_id?: string | null
+          current_subscription_id?: string | null
           full_name?: string
           id?: string
           last_login_at?: string | null
@@ -856,6 +1138,86 @@ export type Database = {
             columns: ["question_id"]
             isOneToOne: false
             referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_current_package_id_fkey"
+            columns: ["current_package_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_current_subscription_id_fkey"
+            columns: ["current_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      question_subcategories: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "question_categories"
             referencedColumns: ["id"]
           },
         ]
@@ -907,6 +1269,7 @@ export type Database = {
       questions: {
         Row: {
           category: string | null
+          category_id: string | null
           created_at: string
           created_by: string | null
           difficulty: Database["public"]["Enums"]["difficulty_level"]
@@ -914,11 +1277,13 @@ export type Database = {
           id: string
           question_text: string
           question_type: Database["public"]["Enums"]["question_type"]
+          subcategory_id: string | null
           topic: string | null
           updated_at: string
         }
         Insert: {
           category?: string | null
+          category_id?: string | null
           created_at?: string
           created_by?: string | null
           difficulty?: Database["public"]["Enums"]["difficulty_level"]
@@ -926,11 +1291,13 @@ export type Database = {
           id?: string
           question_text: string
           question_type?: Database["public"]["Enums"]["question_type"]
+          subcategory_id?: string | null
           topic?: string | null
           updated_at?: string
         }
         Update: {
           category?: string | null
+          category_id?: string | null
           created_at?: string
           created_by?: string | null
           difficulty?: Database["public"]["Enums"]["difficulty_level"]
@@ -938,10 +1305,26 @@ export type Database = {
           id?: string
           question_text?: string
           question_type?: Database["public"]["Enums"]["question_type"]
+          subcategory_id?: string | null
           topic?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "questions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "question_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questions_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "question_subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -969,11 +1352,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_course_enrollment_counts: {
-        Args: { course_ids: string[] }
+      get_bkash_token_statuses: {
+        Args: Record<PropertyKey, never>
         Returns: {
-          course_id: string
-          total: number
+          created_at: string
+          expires_at: string | null
+          last_refreshed_at: string | null
+          token_exists: boolean
+          token_masked: string | null
+          token_type: string
+          updated_at: string
         }[]
       }
       get_public_global_leaderboard: {
@@ -1005,16 +1393,35 @@ export type Database = {
         }
         Returns: boolean
       }
+      get_public_bkash_config: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          currency: string
+          enable_tokenized: boolean
+          environment_mode: string
+          is_enabled: boolean
+          payment_description: string | null
+          payment_title: string
+          provider_name: string
+          show_on_checkout: boolean
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "student"
-      course_status: "draft" | "published"
       difficulty_level: "easy" | "medium" | "hard"
       exam_status: "draft" | "scheduled" | "live" | "ended"
       flash_card_type: "flip" | "mcq" | "true_false" | "image"
-      lesson_content_type: "text" | "image" | "video"
+      payment_connection_status: "connected" | "failed" | "not_tested"
+      payment_log_status: "success" | "error" | "warning" | "info"
+      package_feature_icon_type: "check" | "cross" | "badge" | "numeric_pill"
+      package_feature_type: "text" | "boolean" | "number" | "unlimited" | "not_included"
       question_type: "mcq" | "fill_blank" | "multi_select"
       report_status: "pending" | "reviewed" | "fixed" | "rejected"
+      subscription_billing_type: "one_time" | "recurring"
+      subscription_duration_type: "days" | "months" | "years" | "lifetime"
+      subscription_payment_status: "pending" | "paid" | "failed" | "expired" | "cancelled"
+      subscription_status: "active" | "expired" | "cancelled" | "pending" | "lifetime"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1143,13 +1550,19 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "student"],
-      course_status: ["draft", "published"],
       difficulty_level: ["easy", "medium", "hard"],
       exam_status: ["draft", "scheduled", "live", "ended"],
       flash_card_type: ["flip", "mcq", "true_false", "image"],
-      lesson_content_type: ["text", "image", "video"],
+      payment_connection_status: ["connected", "failed", "not_tested"],
+      payment_log_status: ["success", "error", "warning", "info"],
+      package_feature_icon_type: ["check", "cross", "badge", "numeric_pill"],
+      package_feature_type: ["text", "boolean", "number", "unlimited", "not_included"],
       question_type: ["mcq", "fill_blank", "multi_select"],
       report_status: ["pending", "reviewed", "fixed", "rejected"],
+      subscription_billing_type: ["one_time", "recurring"],
+      subscription_duration_type: ["days", "months", "years", "lifetime"],
+      subscription_payment_status: ["pending", "paid", "failed", "expired", "cancelled"],
+      subscription_status: ["active", "expired", "cancelled", "pending", "lifetime"],
     },
   },
 } as const

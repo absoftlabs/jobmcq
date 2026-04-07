@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "@/hooks/use-toast";
+import { withTimeout } from "@/lib/withTimeout";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -20,6 +22,8 @@ interface Stats {
   pendingReports: number;
 }
 
+type CountResponse = { count: number | null; error: { message: string } | null };
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
@@ -34,25 +38,78 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [usersRes, examsRes, liveRes, attemptsRes, passedRes, reportsRes] = await Promise.all([
-          supabase.from("profiles").select("id", { count: "exact", head: true }),
-          supabase.from("exams").select("id", { count: "exact", head: true }),
-          supabase.from("exams").select("id", { count: "exact", head: true }).eq("status", "live"),
-          supabase.from("attempts").select("id", { count: "exact", head: true }).not("submitted_at", "is", null),
-          supabase.from("attempts").select("id", { count: "exact", head: true }).eq("is_passed", true),
-          supabase.from("question_reports").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        const [usersRes, examsRes, liveRes, attemptsRes, passedRes, reportsRes] = await Promise.allSettled([
+          withTimeout(
+            supabase.from("profiles").select("id", { count: "exact", head: true }).throwOnError(),
+            12000,
+            "ইউজার স্ট্যাটস লোড হতে টাইমআউট হয়েছে।",
+          ),
+          withTimeout(
+            supabase.from("exams").select("id", { count: "exact", head: true }).throwOnError(),
+            12000,
+            "এক্সাম স্ট্যাটস লোড হতে টাইমআউট হয়েছে।",
+          ),
+          withTimeout(
+            supabase.from("exams").select("id", { count: "exact", head: true }).eq("status", "live").throwOnError(),
+            12000,
+            "লাইভ এক্সাম স্ট্যাটস লোড হতে টাইমআউট হয়েছে।",
+          ),
+          withTimeout(
+            supabase
+              .from("attempts")
+              .select("id", { count: "exact", head: true })
+              .not("submitted_at", "is", null)
+              .throwOnError(),
+            12000,
+            "অ্যাটেম্পট স্ট্যাটস লোড হতে টাইমআউট হয়েছে।",
+          ),
+          withTimeout(
+            supabase.from("attempts").select("id", { count: "exact", head: true }).eq("is_passed", true).throwOnError(),
+            12000,
+            "পাসড অ্যাটেম্পট স্ট্যাটস লোড হতে টাইমআউট হয়েছে।",
+          ),
+          withTimeout(
+            supabase
+              .from("question_reports")
+              .select("id", { count: "exact", head: true })
+              .eq("status", "pending")
+              .throwOnError(),
+            12000,
+            "রিপোর্ট স্ট্যাটস লোড হতে টাইমআউট হয়েছে।",
+          ),
         ]);
 
-        const totalAttempts = attemptsRes.count ?? 0;
-        const passed = passedRes.count ?? 0;
+        const getCount = (result: PromiseSettledResult<CountResponse>, label: string) => {
+          if (result.status === "fulfilled" && !result.value.error) {
+            return result.value.count ?? 0;
+          }
+
+          const message =
+            result.status === "fulfilled"
+              ? result.value.error?.message || `${label} query ব্যর্থ হয়েছে।`
+              : result.reason instanceof Error
+                ? result.reason.message
+                : `${label} query ব্যর্থ হয়েছে।`;
+
+          toast({
+            title: `${label} লোড হয়নি`,
+            description: message,
+            variant: "destructive",
+          });
+
+          return 0;
+        };
+
+        const totalAttempts = getCount(attemptsRes, "Attempt");
+        const passed = getCount(passedRes, "Passed attempt");
 
         setStats({
-          totalUsers: usersRes.count ?? 0,
-          totalExams: examsRes.count ?? 0,
-          liveExams: liveRes.count ?? 0,
+          totalUsers: getCount(usersRes, "User"),
+          totalExams: getCount(examsRes, "Exam"),
+          liveExams: getCount(liveRes, "Live exam"),
           totalAttempts,
           passRate: totalAttempts > 0 ? Math.round((passed / totalAttempts) * 100) : 0,
-          pendingReports: reportsRes.count ?? 0,
+          pendingReports: getCount(reportsRes, "Report"),
         });
       } finally {
         setLoading(false);
@@ -75,7 +132,7 @@ export default function AdminDashboard() {
       {
         title: "মোট পরীক্ষা",
         value: stats.totalExams,
-        subtitle: "তৈরি হওয়া এক্সাম সংখ্যা",
+        subtitle: "তৈরি হওয়া এক্সামের সংখ্যা",
         icon: FileText,
         iconWrap: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
         glow: "from-blue-500/25 via-blue-500/10 to-transparent",
@@ -132,7 +189,7 @@ export default function AdminDashboard() {
           <p className="text-xs font-medium uppercase tracking-wide text-primary/80">Admin Control Center</p>
           <h1 className="mt-2 text-2xl font-black tracking-tight md:text-3xl">অ্যাডমিন ড্যাশবোর্ড</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            প্ল্যাটফর্মের সামগ্রিক অবস্থা, পরীক্ষার অগ্রগতি এবং রিভিউ প্রয়োজন এমন গুরুত্বপূর্ণ মেট্রিকগুলো এখানেই দেখুন।
+            প্ল্যাটফর্মের সামগ্রিক অবস্থা, পরীক্ষার অগ্রগতি এবং রিভিউ প্রয়োজন এমন গুরুত্বপূর্ণ মেট্রিকগুলো এখানে দেখুন।
           </p>
         </CardContent>
       </Card>
@@ -173,15 +230,21 @@ export default function AdminDashboard() {
           <CardContent className="space-y-4 text-sm">
             <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3">
               <span className="text-muted-foreground">লাইভ পরীক্ষা রেশিও</span>
-              <span className="font-semibold">{stats.totalExams > 0 ? Math.round((stats.liveExams / stats.totalExams) * 100) : 0}%</span>
+              <span className="font-semibold">
+                {stats.totalExams > 0 ? Math.round((stats.liveExams / stats.totalExams) * 100) : 0}%
+              </span>
             </div>
             <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3">
               <span className="text-muted-foreground">রিপোর্ট প্রেসার</span>
-              <span className="font-semibold">{stats.pendingReports > 10 ? "High" : stats.pendingReports > 0 ? "Moderate" : "Low"}</span>
+              <span className="font-semibold">
+                {stats.pendingReports > 10 ? "High" : stats.pendingReports > 0 ? "Moderate" : "Low"}
+              </span>
             </div>
             <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3">
               <span className="text-muted-foreground">পারফরম্যান্স স্কোর</span>
-              <span className="font-semibold">{stats.passRate >= 70 ? "Strong" : stats.passRate >= 40 ? "Average" : "Needs Attention"}</span>
+              <span className="font-semibold">
+                {stats.passRate >= 70 ? "Strong" : stats.passRate >= 40 ? "Average" : "Needs Attention"}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -193,7 +256,9 @@ export default function AdminDashboard() {
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <p>মোট {stats.totalUsers} জন শিক্ষার্থীর মধ্যে {stats.totalAttempts} টি attempt রেকর্ড হয়েছে।</p>
             <p>বর্তমানে {stats.liveExams} টি পরীক্ষা লাইভ আছে এবং গড় পাসের হার {stats.passRate}%।</p>
-            <p>রিপোর্ট কিউতে {stats.pendingReports} টি আইটেম আছে, প্রয়োজন হলে Reports সেকশন থেকে রিভিউ করুন।</p>
+            <p>
+              রিপোর্ট কিউতে {stats.pendingReports} টি আইটেম আছে, প্রয়োজন হলে Reports section থেকে রিভিউ করুন।
+            </p>
           </CardContent>
         </Card>
       </div>

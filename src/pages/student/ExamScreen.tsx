@@ -11,6 +11,8 @@ import { Flag, ChevronLeft, ChevronRight, Send } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Enums, Tables, TablesInsert } from "@/integrations/supabase/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSubscriptionAccess } from "@/hooks/use-subscription-access";
 
 interface Question {
   id: string;
@@ -32,6 +34,8 @@ export default function ExamScreen() {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { hasActiveSubscription, loading: subscriptionLoading } = useSubscriptionAccess(user?.id);
 
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -52,7 +56,17 @@ export default function ExamScreen() {
 
   useEffect(() => {
     const fetch = async () => {
-      if (!attemptId) return;
+      if (!attemptId || subscriptionLoading) return;
+
+      if (!hasActiveSubscription) {
+        toast({
+          title: "সাবস্ক্রিপশন প্রয়োজন",
+          description: "সক্রিয় সাবস্ক্রিপশন ছাড়া পরীক্ষা দেওয়া যাবে না।",
+          variant: "destructive",
+        });
+        navigate("/student/subscription", { replace: true });
+        return;
+      }
 
       const { data: attempt } = await supabase
         .from("attempts")
@@ -68,16 +82,23 @@ export default function ExamScreen() {
       const { data: authData } = await supabase.auth.getUser();
       const currentUser = authData.user;
       if (currentUser) {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("account_status")
           .eq("user_id", currentUser.id)
           .maybeSingle();
 
-        if (profile?.account_status === "suspended" || profile?.account_status === "deleted") {
+        if (
+          !profileError &&
+          (
+            profile?.account_status === "pending" ||
+            profile?.account_status === "suspended" ||
+            profile?.account_status === "deleted"
+          )
+        ) {
           toast({
             title: "আপনার একাউন্ট সীমাবদ্ধ",
-            description: "আপনি বর্তমানে পরীক্ষা দিতে পারবেন না।",
+            description: "এডমিন অনুমোদন না পাওয়া পর্যন্ত বা একাউন্ট সীমাবদ্ধ থাকলে পরীক্ষা দেওয়া যাবে না।",
             variant: "destructive",
           });
           navigate("/student/exams");
@@ -136,8 +157,8 @@ export default function ExamScreen() {
       setFillAnswers(fill);
       setLoading(false);
     };
-    fetch();
-  }, [attemptId, navigate]);
+    void fetch();
+  }, [attemptId, hasActiveSubscription, navigate, subscriptionLoading, toast]);
 
   // Timer
   useEffect(() => {
@@ -266,7 +287,7 @@ export default function ExamScreen() {
     setReportMessage("");
   };
 
-  if (loading) {
+  if (loading || subscriptionLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
